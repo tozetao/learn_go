@@ -21,10 +21,10 @@ func InitGin(middlewares []gin.HandlerFunc,
 	return server
 }
 
-func InitMiddlewares() []gin.HandlerFunc {
+func InitMiddlewares(jwtHandler *web.JWTHandler) []gin.HandlerFunc {
 	return []gin.HandlerFunc{
 		corsHdl(),
-		authHdl(),
+		authHdl(jwtHandler),
 	}
 }
 
@@ -38,7 +38,7 @@ func corsHdl() gin.HandlerFunc {
 		// 跨域时允许携带的请求头
 		AllowHeaders: []string{"Origin", "Content-Type", "Authorization"},
 		// 跨域时允许读取的响应头
-		ExposeHeaders: []string{"x-jwt-token"},
+		ExposeHeaders: []string{"x-jwt-token", "x-refresh-token"},
 		// 是否允许携带cookie
 		AllowCredentials: true,
 		AllowOriginFunc: func(origin string) bool {
@@ -52,20 +52,16 @@ func corsHdl() gin.HandlerFunc {
 }
 
 // authHdl 用户验证（jwt）
-func authHdl() gin.HandlerFunc {
-	login := middleware.NewLoginJWTMiddlewareBuilder()
+func authHdl(handler *web.JWTHandler) gin.HandlerFunc {
+	login := middleware.NewLoginJWTMiddlewareBuilder(handler)
 	s := []string{
-		"/users/login",
 		"/users/signup",
-		"/",
-		"/demo",
+		"/users/login",
 		"/users/login_sms",
 		"/sms/send",
+		"/users/refresh_token",
+		"/",
+		"/demo",
 	}
 	return login.IgnorePath(s...).Builder()
 }
-
-//func initLimiter() gin.HandlerFunc {
-//	l := limiter.NewRedisSideWindow()
-//	builder := ratelimit.NewBuilder("limit:ip:")
-//}

@@ -20,9 +20,10 @@ import (
 // Injectors from wire.go:
 
 func InitWebServer(templateId string) *gin.Engine {
-	v := ioc.InitMiddlewares()
-	smsService := ioc.InitSMSService()
 	cmdable := ioc.NewRedis()
+	jwtHandler := web.NewJWTHandler(cmdable)
+	v := ioc.InitMiddlewares(jwtHandler)
+	smsService := ioc.InitSMSService()
 	codeCache := cache.NewCodeCache(cmdable)
 	codeRepository := repository.NewCodeRepository(codeCache)
 	codeService := service.NewCodeService(templateId, smsService, codeRepository)
@@ -32,9 +33,9 @@ func InitWebServer(templateId string) *gin.Engine {
 	userCache := cache.NewUserCache(cmdable)
 	userRepository := repository.NewUserRepository(userDao, userCache)
 	userService := service.NewUserService(userRepository)
-	userHandler := web.NewUserHandler(userService, codeService)
+	userHandler := web.NewUserHandler(userService, codeService, jwtHandler)
 	oAuth2Service := ioc.InitOAuth2Service()
-	oAuth2WechatHandler := web.NewOAuth2WechatHandler(oAuth2Service)
+	oAuth2WechatHandler := web.NewOAuth2WechatHandler(oAuth2Service, userService, jwtHandler)
 	engine := ioc.InitGin(v, smsHandler, userHandler, oAuth2WechatHandler)
 	return engine
 }
@@ -42,5 +43,5 @@ func InitWebServer(templateId string) *gin.Engine {
 // wire.go:
 
 var (
-	providers = wire.NewSet(ioc.NewDB, ioc.NewRedis, cache.NewCodeCache, cache.NewUserCache, dao.NewUserDao, repository.NewCodeRepository, repository.NewUserRepository, ioc.InitSMSService, ioc.InitOAuth2Service, service.NewCodeService, service.NewUserService, web.NewSMSHandler, web.NewUserHandler, web.NewOAuth2WechatHandler, ioc.InitMiddlewares, ioc.InitGin)
+	providers = wire.NewSet(ioc.NewDB, ioc.NewRedis, cache.NewCodeCache, cache.NewUserCache, dao.NewUserDao, repository.NewCodeRepository, repository.NewUserRepository, ioc.InitSMSService, ioc.InitOAuth2Service, service.NewCodeService, service.NewUserService, web.NewSMSHandler, web.NewUserHandler, web.NewOAuth2WechatHandler, web.NewJWTHandler, ioc.InitMiddlewares, ioc.InitGin)
 )

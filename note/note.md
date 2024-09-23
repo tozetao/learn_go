@@ -20,9 +20,13 @@ https://gitee.com/geektime-geekbang_admin/geektime-basic-go
 
 问题：
 
+
+
 ```
-什么是jwt? 如何验证用户已经认证?
+wsl --install 
 ```
+
+
 
 
 

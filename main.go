@@ -2,12 +2,17 @@ package main
 
 import (
 	"fmt"
+	"github.com/google/uuid"
 	"time"
 )
 
 func main() {
-	author := &Author{}
-	fmt.Printf("%#v\n", author.createdAt.UnixMilli())
+	ssid := uuid.New()
+
+	fmt.Printf("%v\n", ssid.String())
+
+	//author := &Author{}
+	//fmt.Printf("%#v\n", author.createdAt.UnixMilli())
 }
 
 type Author struct {

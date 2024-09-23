@@ -13,22 +13,16 @@ import (
 	"unicode/utf8"
 )
 
-type UserClaims struct {
-	jwt.RegisteredClaims
-	Uid       int64  `json:"uid"`
-	UserAgent string `json:"user_agent"`
-}
-
 type UserHandler struct {
 	passwordExp *regexp.Regexp
 	emailExp    *regexp.Regexp
 	birthdayExp *regexp.Regexp
 	svc         service.UserService
 	codeSvc     service.CodeService
-	jwtHandler
+	jwtHandler  *JWTHandler
 }
 
-func NewUserHandler(svc service.UserService, codeSvc service.CodeService) *UserHandler {
+func NewUserHandler(svc service.UserService, codeSvc service.CodeService, jwtHandler *JWTHandler) *UserHandler {
 	const (
 		passwordRegexpPattern = `^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d]{5,}$`
 		emailRegexpPattern    = `^[A-Za-z0-9]+([_\.][A-Za-z0-9]+)*@([A-Za-z0-9\-]+\.)+[A-Za-z]{2,6}$`
@@ -46,6 +40,7 @@ func NewUserHandler(svc service.UserService, codeSvc service.CodeService) *UserH
 		birthdayExp: birthdayExp,
 		svc:         svc,
 		codeSvc:     codeSvc,
+		jwtHandler:  jwtHandler,
 	}
 }
 
@@ -150,17 +145,14 @@ func (u *UserHandler) LoginJWT(c *gin.Context) {
 		return
 	}
 
+	// 设置token
 	userAgent := c.GetHeader("User-Agent")
-
-	err = u.setRefreshToken(c, user, userAgent)
+	err = u.jwtHandler.SetLoginToken(c, user.ID, userAgent)
 	if err != nil {
-		c.String(http.StatusOK, "系统错误")
-		return
-	}
-
-	err = u.setJWTToken(c, user, userAgent)
-	if err != nil {
-		c.String(http.StatusOK, "系统错误")
+		c.JSON(http.StatusOK, Result{
+			Code: 5,
+			Msg:  "系统错误",
+		})
 		return
 	}
 
@@ -202,8 +194,14 @@ func (u *UserHandler) LoginSMS(c *gin.Context) {
 	}
 
 	userAgent := c.GetHeader("User-Agent")
-
-	err = u.setJWTToken(c, user, userAgent)
+	err = u.jwtHandler.SetLoginToken(c, user.ID, userAgent)
+	if err != nil {
+		c.JSON(http.StatusOK, Result{
+			Code: 5,
+			Msg:  "系统错误",
+		})
+		return
+	}
 
 	c.String(http.StatusOK, "success")
 }
@@ -296,7 +294,54 @@ func (u *UserHandler) Profile(c *gin.Context) {
 }
 
 func (u *UserHandler) RefreshToken(c *gin.Context) {
-	// 1. 获取长token，
+	authToken, err := u.jwtHandler.ExtractToken(c)
+	if err != nil {
+		c.AbortWithStatus(http.StatusUnauthorized)
+		return
+	}
+
+	var claims RefreshClaims
+	token, err := jwt.ParseWithClaims(authToken, &claims, func(token *jwt.Token) (interface{}, error) {
+		return u.jwtHandler.RefreshTokenKey, nil
+	})
+	if err != nil {
+		c.AbortWithStatus(http.StatusUnauthorized)
+		return
+	}
+	if token == nil || !token.Valid {
+		c.AbortWithStatus(http.StatusUnauthorized)
+		return
+	}
+
+	userAgent := c.GetHeader("user-agent")
+	if userAgent != "" && userAgent != claims.UserAgent {
+		c.AbortWithStatus(http.StatusUnauthorized)
+		return
+	}
+
+	err = u.jwtHandler.CheckSession(c, claims.SSid)
+	if err != nil {
+		c.AbortWithStatus(http.StatusUnauthorized)
+		return
+	}
+
+	// 返回新的jwt token
+	err = u.jwtHandler.SetJWTToken(c, claims.Uid, claims.SSid, userAgent)
+	if err != nil {
+		c.AbortWithStatus(http.StatusUnauthorized)
+		return
+	}
+
+	c.JSON(http.StatusOK, Result{Code: 0, Msg: "success"})
+}
+
+func (u *UserHandler) Logout(c *gin.Context) {
+	err := u.jwtHandler.ClearSession(c)
+	if err != nil {
+		c.JSON(http.StatusOK, Result{Code: 5, Msg: "internal server error."})
+		return
+	}
+	c.JSON(http.StatusOK, Result{Code: 0, Msg: "success"})
 }
 
 func (u *UserHandler) RegisterRoutes(server *gin.Engine) {
@@ -307,4 +352,5 @@ func (u *UserHandler) RegisterRoutes(server *gin.Engine) {
 	rg.POST("/login_sms", u.LoginSMS)
 	rg.POST("/edit", u.Edit)
 	rg.GET("/profile", u.Profile)
+	rg.POST("/logout", u.Logout)
 }

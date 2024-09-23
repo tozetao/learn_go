@@ -1,39 +1,28 @@
 package main
 
 import (
+	"fmt"
 	"github.com/gin-gonic/gin"
+	"github.com/spf13/viper"
 	"net/http"
 )
 
 func main() {
-	templateId := "test-template"
-	server := InitWebServer(templateId)
+	InitViper()
 
-	server.GET("/", func(c *gin.Context) {
-		c.String(http.StatusOK, "Welcome!")
+	server := InitWebServer("test-template")
+	server.GET("/", func(context *gin.Context) {
+		context.String(http.StatusOK, "hello world")
 	})
-	server.Run(":8100")
+	server.Run("9100")
 }
 
-//func initServer() *gin.Engine {
-//	server := gin.Default()
-//
-//	//// rate limiter
-//	//rdb := initRedis()
-//	//server.Use(ratelimit.NewBuilder(rdb, time.Second*10, 100).Build())
-//
-//	//// 设置session中间件
-//	//store, err := redisstore.NewStore(6, "tcp", "192.168.1.100:6379", "",
-//	//	[]byte("8yF7u3sG4hJkZbQeRtDpNxVmCiLwOa9H"), []byte("qWeR7tYvUiOpKjLzHaBxNcDmFsAg4R5E"))
-//	//if err != nil {
-//	//	panic("init redis store failed.")
-//	//}
-//	//server.Use(sessions.Sessions("ssid", store))
-//
-//	// 用户认证（session实现）
-//	//login := middleware.NewLoginMiddlewareBuilder()
-//	//s := []string{"/users/login", "/users/signup", "/test1", "/test/1", "/test2"}
-//	//server.Use(login.IgnorePath(s...).Builder())
-//
-//	return server
-//}
+func InitViper() {
+	viper.SetConfigName("dev")
+	viper.SetConfigType("yaml")
+	viper.AddConfigPath("config")
+	err := viper.ReadInConfig()
+	if err != nil {
+		panic(fmt.Errorf("fatal error config file: %w", err))
+	}
+}

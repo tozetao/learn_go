@@ -5,15 +5,18 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 	"learn_go/webook/internal/web"
 	"net/http"
-	"strings"
 )
 
+// LoginJWTMiddlewareBuilder 该中间件用于检查短token
 type LoginJWTMiddlewareBuilder struct {
-	paths []string
+	paths      []string
+	jwtHandler *web.JWTHandler
 }
 
-func NewLoginJWTMiddlewareBuilder() *LoginJWTMiddlewareBuilder {
-	return &LoginJWTMiddlewareBuilder{}
+func NewLoginJWTMiddlewareBuilder(handler *web.JWTHandler) *LoginJWTMiddlewareBuilder {
+	return &LoginJWTMiddlewareBuilder{
+		jwtHandler: handler,
+	}
 }
 
 func (m *LoginJWTMiddlewareBuilder) IgnorePath(paths ...string) *LoginJWTMiddlewareBuilder {
@@ -30,23 +33,15 @@ func (m *LoginJWTMiddlewareBuilder) Builder() gin.HandlerFunc {
 			}
 		}
 
-		signingKey := []byte("ihbwtj3dGZvDKmgE2gyQL8gBU2saIE")
-		tokenHeader := c.GetHeader("Authorization")
-		if tokenHeader == "" {
+		tokenStr, err := m.jwtHandler.ExtractToken(c)
+		if err != nil {
 			c.AbortWithStatus(http.StatusUnauthorized)
 			return
 		}
 
-		segs := strings.Split(tokenHeader, " ")
-		if len(segs) != 2 {
-			c.AbortWithStatus(http.StatusUnauthorized)
-			return
-		}
-
-		tokenStr := segs[1]
 		claims := &web.UserClaims{}
 		token, err := jwt.ParseWithClaims(tokenStr, claims, func(token *jwt.Token) (interface{}, error) {
-			return signingKey, nil
+			return m.jwtHandler.ShortTokenKey, nil
 		})
 		if err != nil {
 			c.AbortWithStatus(http.StatusUnauthorized)
@@ -57,11 +52,6 @@ func (m *LoginJWTMiddlewareBuilder) Builder() gin.HandlerFunc {
 			return
 		}
 
-		/*
-			如果token被窃取了, 该怎么办?
-			可以让前端携带用户登陆时的环境的特征，因为用户登录时的环境一般都是固定的，所以可以通过验证jwt token携带的用户特征，判断jwt token是否异常。
-			为了方便，我们使用浏览器的user-agent来作为登录特征。
-		*/
 		userAgent := c.GetHeader("User-Agent")
 		if userAgent != claims.UserAgent {
 			// TODO: 异常情况，需要记录日志。
@@ -69,7 +59,12 @@ func (m *LoginJWTMiddlewareBuilder) Builder() gin.HandlerFunc {
 			return
 		}
 
-		c.Set("claims", claims)
-		// fmt.Printf("parse successfully, UID: %v, user-agent: %s\n", claims.Uid, claims.UserAgent)
+		err = m.jwtHandler.CheckSession(c, claims.SSid)
+		if err != nil {
+			c.AbortWithStatus(http.StatusUnauthorized)
+			return
+		}
+
+		c.Set("user", claims)
 	}
 }

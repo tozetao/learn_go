@@ -24,24 +24,23 @@ var (
 
 		dao.NewUserDao,
 
-		repository.NewCodeRepository, repository.NewUserRepository,
+		repository.NewCodeRepository,
+		repository.NewUserRepository,
 
 		ioc.InitSMSService,
 		ioc.InitOAuth2Service,
-		service.NewCodeService, service.NewUserService,
+		service.NewCodeService,
+		service.NewUserService,
 
-		web.NewSMSHandler, web.NewUserHandler,
+		web.NewSMSHandler,
+		web.NewUserHandler,
 		web.NewOAuth2WechatHandler,
+		web.NewJWTHandler,
 
 		ioc.InitMiddlewares,
 		ioc.InitGin,
 	)
 )
-
-/*
-Injector
-	一个按照依赖顺序调用provider的函数。
-*/
 
 func InitWebServer(templateId string) *gin.Engine {
 	wire.Build(providers)

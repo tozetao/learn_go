@@ -8,15 +8,16 @@ import (
 )
 
 type OAuth2WechatHandler struct {
-	oauth2Svc wechat.OAuth2Service
-	userSvc   service.UserService
-	jwtHandler
+	oauth2Svc  wechat.OAuth2Service
+	userSvc    service.UserService
+	jwtHandler *JWTHandler
 }
 
-func NewOAuth2WechatHandler(oauth2Svc wechat.OAuth2Service, userSvc service.UserService) *OAuth2WechatHandler {
+func NewOAuth2WechatHandler(oauth2Svc wechat.OAuth2Service, userSvc service.UserService, jwtHandler *JWTHandler) *OAuth2WechatHandler {
 	return &OAuth2WechatHandler{
-		oauth2Svc: oauth2Svc,
-		userSvc:   userSvc,
+		oauth2Svc:  oauth2Svc,
+		userSvc:    userSvc,
+		jwtHandler: jwtHandler,
 	}
 }
 
@@ -66,8 +67,8 @@ func (w *OAuth2WechatHandler) Callback(c *gin.Context) {
 		return
 	}
 
-	// 返回jwt
-	err = w.setJWTToken(c, user, c.GetHeader("user-agent"))
+	userAgent := c.GetHeader("user-agent")
+	err = w.jwtHandler.SetLoginToken(c, user.ID, userAgent)
 	if err != nil {
 		c.JSON(http.StatusOK, Result{Code: 5})
 		return
