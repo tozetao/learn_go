@@ -198,3 +198,18 @@ go build编译标签
 go build -tags=k8s .
 ```
 
+
+
+
+
+
+
+### docker
+
+```
+# 删除镜像
+docker rmi -f flycash/webook:v0.0.1
+
+# 构建镜像
+docker build -t flycash/webook:v0.0.1 .
+```
