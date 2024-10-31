@@ -19,6 +19,7 @@ var (
 		// 第三方依赖
 		ioc.NewDB,
 		ioc.NewRedis,
+		ioc.NewLogger,
 
 		cache.NewCodeCache, cache.NewUserCache,
 

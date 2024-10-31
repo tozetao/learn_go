@@ -6,6 +6,7 @@ import (
 	"golang.org/x/crypto/bcrypt"
 	"learn_go/webook/internal/domain"
 	"learn_go/webook/internal/repository"
+	"learn_go/webook/pkg/logger"
 )
 
 var (
@@ -27,11 +28,13 @@ type UserService interface {
 
 type userService struct {
 	userRepo repository.UserRepository
+	logger   logger.LoggerV2
 }
 
-func NewUserService(userRepository repository.UserRepository) UserService {
+func NewUserService(userRepository repository.UserRepository, logger logger.LoggerV2) UserService {
 	return &userService{
 		userRepo: userRepository,
+		logger:   logger,
 	}
 }
 
@@ -86,6 +89,9 @@ func (svc *userService) FindOrCreate(ctx context.Context, phone string) (domain.
 	if err != nil && err != repository.ErrDuplicateUser {
 		return domain.User{}, err
 	}
+
+	svc.logger.Info("手机号重复了")
+
 	// 手机号存在重复的处理
 	return svc.userRepo.FindByPhone(ctx, phone)
 

@@ -3,16 +3,16 @@ package main
 import (
 	"fmt"
 	"github.com/gin-gonic/gin"
+	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
+	_ "github.com/spf13/viper/remote"
+	"go.uber.org/zap"
 	"net/http"
 )
 
 func main() {
-	//configFile := pflag.String("config", "config/dev.yaml", "配置文件路径")
-	//pflag.Parse()
-	//fmt.Printf("configFile: %s\n", *configFile)
-
-	//TestViper()
+	InitConfig()
+	//InitLogger()
 
 	server := InitWebServer("test-template")
 	server.GET("/", func(context *gin.Context) {
@@ -21,31 +21,40 @@ func main() {
 	server.Run(":9130")
 }
 
-func InitConfigV1() {
-	viper.SetConfigName("dev")
-	viper.SetConfigType("yaml")
-	viper.AddConfigPath("config")
+func InitConfig() {
+	configFile := pflag.String("config", "config/dev.yaml", "配置文件路径")
+	pflag.Parse()
+
+	//viper.SetConfigName("dev")
+	//viper.SetConfigType("yaml")
+	//viper.AddConfigPath("config")
+
+	viper.SetConfigFile(*configFile)
 	err := viper.ReadInConfig()
 	if err != nil {
 		panic(fmt.Errorf("fatal error config file: %w", err))
 	}
-
-	type Config struct {
-		Addr string
-	}
-	c := Config{}
-	err = viper.UnmarshalKey("redis", &c)
-	if err != nil {
-		panic(fmt.Errorf("unmarshal error: %w", err))
-	}
-
-	type DBConfig struct {
-		DSN string
-	}
-	var dbConfig DBConfig
-	err = viper.UnmarshalKey("db", &dbConfig)
-	fmt.Printf("%v\n", dbConfig)
 }
 
-// 测试下etcd
-//
+func InitRemoteConfig() {
+	err := viper.AddRemoteProvider("etcd3", "http://127.0.0.1:12379", "/webook")
+	if err != nil {
+		panic(err)
+	}
+	viper.SetConfigType("yaml")
+	err = viper.ReadRemoteConfig()
+	if err != nil {
+		panic(err)
+	}
+
+	str := viper.GetString("user1")
+	fmt.Printf("user1: %s\n", str)
+}
+
+func InitLogger() {
+	logger, err := zap.NewDevelopment()
+	if err != nil {
+		panic(err)
+	}
+	zap.ReplaceGlobals(logger)
+}
