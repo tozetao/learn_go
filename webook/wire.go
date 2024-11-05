@@ -17,9 +17,9 @@ import (
 var (
 	providers = wire.NewSet(
 		// 第三方依赖
+		ioc.NewLogger,
 		ioc.NewDB,
 		ioc.NewRedis,
-		ioc.NewLogger,
 
 		cache.NewCodeCache, cache.NewUserCache,
 
@@ -37,6 +37,7 @@ var (
 		web.NewUserHandler,
 		web.NewOAuth2WechatHandler,
 		web.NewJWTHandler,
+		web.NewTestHandler,
 
 		ioc.InitMiddlewares,
 		ioc.InitGin,

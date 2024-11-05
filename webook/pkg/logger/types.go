@@ -8,11 +8,6 @@ type LoggerV1 interface {
 	Error(msg string, args ...any)
 }
 
-type Field struct {
-	Key   string
-	Value string
-}
-
 // LoggerV2 风格2，认为日志中的参数都是键值对。
 type LoggerV2 interface {
 	Debug(msg string, args ...Field)

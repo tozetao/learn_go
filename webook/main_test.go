@@ -1,9 +1,16 @@
 package main
 
 import (
+	"fmt"
 	"go.uber.org/zap"
 	"testing"
 )
+
+func TestSlice(t *testing.T) {
+	str := "1234567890"
+	fmt.Printf("%v\n", str[0:2])
+	fmt.Printf("%v\n", str[0:0])
+}
 
 func TestViper(t *testing.T) {
 	InitConfig()

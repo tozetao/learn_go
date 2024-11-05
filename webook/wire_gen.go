@@ -24,29 +24,30 @@ import (
 // Injectors from wire.go:
 
 func InitWebServer(templateId string) *gin.Engine {
-	cmdable := ioc.NewRedis()
+	loggerV2 := ioc.NewLogger()
+	cmdable := ioc.NewRedis(loggerV2)
 	jwtHandler := web.NewJWTHandler(cmdable)
-	v := ioc.InitMiddlewares(jwtHandler)
+	v := ioc.InitMiddlewares(jwtHandler, loggerV2)
 	smsService := ioc.InitSMSService()
 	codeCache := cache.NewCodeCache(cmdable)
 	codeRepository := repository.NewCodeRepository(codeCache)
 	codeService := service.NewCodeService(templateId, smsService, codeRepository)
 	smsHandler := web.NewSMSHandler(codeService)
-	db := ioc.NewDB()
+	db := ioc.NewDB(loggerV2)
 	userDao := dao.NewUserDao(db)
 	userCache := cache.NewUserCache(cmdable)
 	userRepository := repository.NewUserRepository(userDao, userCache)
-	loggerV2 := ioc.NewLogger()
 	userService := service.NewUserService(userRepository, loggerV2)
 	userHandler := web.NewUserHandler(userService, codeService, jwtHandler)
 	oAuth2Service := ioc.InitOAuth2Service()
 	oAuth2WechatHandler := web.NewOAuth2WechatHandler(oAuth2Service, userService, jwtHandler)
-	engine := ioc.InitGin(v, smsHandler, userHandler, oAuth2WechatHandler)
+	testHandler := web.NewTestHandler(loggerV2)
+	engine := ioc.InitGin(v, smsHandler, userHandler, oAuth2WechatHandler, testHandler)
 	return engine
 }
 
 // wire.go:
 
 var (
-	providers = wire.NewSet(ioc.NewDB, ioc.NewRedis, ioc.NewLogger, cache.NewCodeCache, cache.NewUserCache, dao.NewUserDao, repository.NewCodeRepository, repository.NewUserRepository, ioc.InitSMSService, ioc.InitOAuth2Service, service.NewCodeService, service.NewUserService, web.NewSMSHandler, web.NewUserHandler, web.NewOAuth2WechatHandler, web.NewJWTHandler, ioc.InitMiddlewares, ioc.InitGin)
+	providers = wire.NewSet(ioc.NewLogger, ioc.NewDB, ioc.NewRedis, cache.NewCodeCache, cache.NewUserCache, dao.NewUserDao, repository.NewCodeRepository, repository.NewUserRepository, ioc.InitSMSService, ioc.InitOAuth2Service, service.NewCodeService, service.NewUserService, web.NewSMSHandler, web.NewUserHandler, web.NewOAuth2WechatHandler, web.NewJWTHandler, web.NewTestHandler, ioc.InitMiddlewares, ioc.InitGin)
 )

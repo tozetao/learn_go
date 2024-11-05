@@ -115,7 +115,7 @@ func TestEmail(t *testing.T) {
 		},
 	}
 
-	h := NewUserHandler(nil, nil)
+	h := NewUserHandler(nil, nil, nil)
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {

@@ -1,14 +1,14 @@
 package ioc
 
 import (
-	"fmt"
 	"github.com/spf13/viper"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
 	"learn_go/webook/internal/repository/dao"
+	"learn_go/webook/pkg/logger"
 )
 
-func NewDB() *gorm.DB {
+func NewDB(log logger.LoggerV2) *gorm.DB {
 	type Config struct {
 		DSN string
 	}
@@ -19,7 +19,7 @@ func NewDB() *gorm.DB {
 	if err != nil {
 		panic(err)
 	}
-	fmt.Printf("db config: %#v\n", config)
+	log.Info("db config", logger.Field{Key: "", Value: config})
 
 	db, err := gorm.Open(mysql.Open(config.DSN), &gorm.Config{})
 	if err != nil {

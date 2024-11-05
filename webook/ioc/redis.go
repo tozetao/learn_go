@@ -1,12 +1,12 @@
 package ioc
 
 import (
-	"fmt"
 	"github.com/redis/go-redis/v9"
 	"github.com/spf13/viper"
+	"learn_go/webook/pkg/logger"
 )
 
-func NewRedis() redis.Cmdable {
+func NewRedis(log logger.LoggerV2) redis.Cmdable {
 	type RedisConfig struct {
 		Addr string
 	}
@@ -18,7 +18,7 @@ func NewRedis() redis.Cmdable {
 		panic(err)
 	}
 
-	fmt.Printf("redis config: %v\n", *config)
+	log.Info("", logger.Field{Key: "redis config", Value: *config})
 
 	return redis.NewClient(&redis.Options{
 		//Addr: "192.168.1.100:6379",

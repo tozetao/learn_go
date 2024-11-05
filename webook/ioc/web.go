@@ -5,26 +5,35 @@ import (
 	"github.com/gin-gonic/gin"
 	"learn_go/webook/internal/web"
 	"learn_go/webook/internal/web/middleware"
+	"learn_go/webook/pkg/logger"
 	"strings"
 	"time"
 )
 
-func InitGin(middlewares []gin.HandlerFunc,
-	smsHandler *web.SMSHandler, userHandler *web.UserHandler,
-	oauthWechatHandler *web.OAuth2WechatHandler) *gin.Engine {
+func InitGin(
+	middlewares []gin.HandlerFunc,
+	smsHandler *web.SMSHandler,
+	userHandler *web.UserHandler,
+	oauthWechatHandler *web.OAuth2WechatHandler,
+	testHandler *web.TestHandler) *gin.Engine {
+
 	server := gin.Default()
 	server.Use(middlewares...)
 
+	// 注册路由
 	smsHandler.RegisterRoutes(server)
 	userHandler.RegisterRoutes(server)
 	oauthWechatHandler.RegisterRoutes(server)
+	testHandler.RegisterHandler(server)
+
 	return server
 }
 
-func InitMiddlewares(jwtHandler *web.JWTHandler) []gin.HandlerFunc {
+func InitMiddlewares(jwtHandler *web.JWTHandler, logger logger.LoggerV2) []gin.HandlerFunc {
 	return []gin.HandlerFunc{
 		corsHdl(),
 		authHdl(jwtHandler),
+		logHdl(logger),
 	}
 }
 
@@ -61,7 +70,14 @@ func authHdl(handler *web.JWTHandler) gin.HandlerFunc {
 		"/sms/send",
 		"/users/refresh_token",
 		"/",
-		"/demo",
+		"/test",
 	}
 	return login.IgnorePath(s...).Builder()
+}
+
+func logHdl(l logger.LoggerV2) gin.HandlerFunc {
+	m := middleware.NewLogMiddleware(func(c *gin.Context, accessLog middleware.AccessLog) {
+		l.Info("", logger.Field{Key: "req", Value: accessLog})
+	})
+	return m.Build()
 }

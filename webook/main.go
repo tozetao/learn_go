@@ -15,9 +15,11 @@ func main() {
 	//InitLogger()
 
 	server := InitWebServer("test-template")
+
 	server.GET("/", func(context *gin.Context) {
 		context.String(http.StatusOK, "hello world")
 	})
+
 	server.Run(":9130")
 }
 
