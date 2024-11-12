@@ -10,6 +10,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/google/wire"
 	"learn_go/webook/internal/repository"
+	"learn_go/webook/internal/repository/article"
 	"learn_go/webook/internal/repository/cache"
 	"learn_go/webook/internal/repository/dao"
 	"learn_go/webook/internal/service"
@@ -22,7 +23,7 @@ import (
 func InitArticleHandler() *web.ArticleHandler {
 	db := NewDB()
 	articleDao := dao.NewArticleDao(db)
-	articleRepository := repository.NewArticleRepository(articleDao)
+	articleRepository := article.NewArticleRepository(articleDao)
 	loggerV2 := ioc.NewLogger()
 	articleService := service.NewArticleService(articleRepository, loggerV2)
 	articleHandler := web.NewArticleHandler(articleService, loggerV2)
@@ -60,6 +61,6 @@ var (
 	)
 
 	articleProviders = wire.NewSet(ioc.NewLogger, NewDB,
-		NewRedis, web.NewArticleHandler, service.NewArticleService, repository.NewArticleRepository, dao.NewArticleDao,
+		NewRedis, web.NewArticleHandler, service.NewArticleService, article.NewArticleRepository, dao.NewArticleDao,
 	)
 )

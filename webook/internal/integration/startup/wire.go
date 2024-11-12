@@ -7,6 +7,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/google/wire"
 	"learn_go/webook/internal/repository"
+	"learn_go/webook/internal/repository/article"
 	"learn_go/webook/internal/repository/cache"
 	"learn_go/webook/internal/repository/dao"
 	"learn_go/webook/internal/service"
@@ -50,7 +51,7 @@ var (
 		web.NewArticleHandler,
 
 		service.NewArticleService,
-		repository.NewArticleRepository,
+		article.NewArticleRepository,
 		dao.NewArticleDao,
 	)
 )

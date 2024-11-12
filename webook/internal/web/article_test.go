@@ -71,6 +71,14 @@ func TestArticleHandler_Publish(t *testing.T) {
 				return svc
 			},
 		},
+		{
+			name: "发布失败",
+			body: `
+{
+	"title": ""
+}
+`,
+		},
 	}
 
 	for _, testCase := range testCases {
