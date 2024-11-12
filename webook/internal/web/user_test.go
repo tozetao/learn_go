@@ -59,7 +59,7 @@ func TestUserHandler_SignUp(t *testing.T) {
 
 			// 准备服务器，注册路由
 			server := gin.Default()
-			hld := NewUserHandler(userSvc, codeSvc)
+			hld := NewUserHandler(userSvc, codeSvc, NewJWTHandler(nil))
 			hld.RegisterRoutes(server)
 
 			req := testCase.reqBuilder(t)
