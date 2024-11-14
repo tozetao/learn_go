@@ -43,8 +43,13 @@ type ArticleService interface {
 }
 
 type articleService struct {
+	log logger.LoggerV2
+
 	articleRepo article.ArticleRepository
-	log         logger.LoggerV2
+
+	// 与ArticleRepository互斥
+	articleAuthorRepo article.AuthorRepository
+	articleReaderRepo article.ReaderRepository
 }
 
 func (svc *articleService) Publish(ctx context.Context, article domain.Article) (int64, error) {
@@ -53,13 +58,47 @@ func (svc *articleService) Publish(ctx context.Context, article domain.Article) 
 }
 
 func (svc *articleService) PublishV1(ctx context.Context, article domain.Article) (int64, error) {
+	var (
+		id  = article.ID
+		err error
+	)
+	if article.ID > 0 {
+		err = svc.articleAuthorRepo.Update(ctx, article)
+	} else {
+		id, err = svc.articleAuthorRepo.Create(ctx, article)
+	}
+	article.ID = id
+	if err != nil {
+		return 0, err
+	}
 
+	/*
+		新建文章 => 发布文章，这俩个操作并不是原子性的，在新建或者发布都可能发生失败。
+		能否使用事务？
+			按照Repository的接口设计，是无法使用事务的。因为无法保证Author、Reader是同个库，或者同个存储源。
+			并且对于是纯关系型数据库的事务，开启事务和提交事务不应该放在Service层来控制。
+		解决方案?
+			同过重试尽可能的保证数据的最终趋于一致。
+	*/
+	for i := 0; i < 3; i++ {
+		id, err = svc.articleReaderRepo.Save(ctx, article)
+		if err == nil {
+			break
+		}
+	}
+	return id, err
 }
 
-func NewArticleService(articleRepo article.ArticleRepository, log logger.LoggerV2) ArticleService {
+func NewArticleService(
+	articleRepo article.ArticleRepository,
+	articleAuthorRepo article.AuthorRepository,
+	articleReaderRepo article.ReaderRepository,
+	log logger.LoggerV2) ArticleService {
 	return &articleService{
-		log:         log,
-		articleRepo: articleRepo,
+		log:               log,
+		articleRepo:       articleRepo,
+		articleAuthorRepo: articleAuthorRepo,
+		articleReaderRepo: articleReaderRepo,
 	}
 }
 

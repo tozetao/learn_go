@@ -68,7 +68,7 @@ func (handler *ArticleHandler) Edit(c *gin.Context) {
 
 	articleID, err := handler.svc.Save(c, req.toDomain(userClaims.Uid))
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, Result{
+		c.JSON(http.StatusOK, Result{
 			Code: 5,
 			Msg:  "failed",
 		})

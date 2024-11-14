@@ -93,6 +93,9 @@ mockgen -source=./internal/service/user.go -package=svcmocks -destination=./inte
 
 mockgen -source=./internal/service/article.go -package=svcmocks -destination=./internal/service/mocks/article.mock.go
 
+mockgen -source=./internal/repository/article/article_author.go -package=artrepomocks -destination=./internal/repository/mocks/article/article_author.mock.go
+
+mockgen -source=./internal/repository/article/article_reader.go -package=artrepomocks -destination=./internal/repository/mocks/article/article_reader.mock.go
 
 # repository
 mockgen -source=./internal/repository/user.go -package=repomocks -destination=./internal/repository/mocks/user.mock.go

@@ -3,6 +3,7 @@ package web
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -29,7 +30,7 @@ import (
 
 3. 运行测试用例
 */
-func TestArticleHandler_Publish(t *testing.T) {
+func TestArticleHandler_Edit(t *testing.T) {
 	testCases := []struct {
 		name string
 
@@ -52,7 +53,7 @@ func TestArticleHandler_Publish(t *testing.T) {
 			wantCode: http.StatusOK,
 			wantRes: Result{
 				Msg:  "ok",
-				Data: 1,
+				Data: float64(1),
 			},
 
 			mock: func(controller *gomock.Controller) service.ArticleService {
@@ -60,7 +61,7 @@ func TestArticleHandler_Publish(t *testing.T) {
 
 				// EXPECT: 返回一个对象，允许调用者指示预期用途。
 				// Return: 声明了模拟函数返回的值。
-				svc.EXPECT().Publish(gomock.Any(), domain.Article{
+				svc.EXPECT().Save(gomock.Any(), domain.Article{
 					Title:   "This is my title",
 					Content: "This is my content",
 					Author: domain.Author{
@@ -75,9 +76,31 @@ func TestArticleHandler_Publish(t *testing.T) {
 			name: "发布失败",
 			body: `
 {
-	"title": ""
+	"title": "This is my title",
+	"content": "This is my content"
 }
 `,
+			wantCode: http.StatusOK,
+			wantRes: Result{
+				Code: 5,
+				Msg:  "failed",
+			},
+
+			mock: func(controller *gomock.Controller) service.ArticleService {
+				svc := svcmocks.NewMockArticleService(controller)
+
+				// EXPECT: 返回一个对象，允许调用者指示预期用途。
+				// Return: 声明了模拟函数返回的值。
+				svc.EXPECT().Save(gomock.Any(), domain.Article{
+					Title:   "This is my title",
+					Content: "This is my content",
+					Author: domain.Author{
+						ID: 2001,
+					},
+				}).Return(int64(0), errors.New("mock db error"))
+
+				return svc
+			},
 		},
 	}
 
@@ -99,7 +122,7 @@ func TestArticleHandler_Publish(t *testing.T) {
 
 			// 构建请求
 			body := bytes.NewBufferString(testCase.body)
-			req, err := http.NewRequest("POST", "/articles/publish", body)
+			req, err := http.NewRequest("POST", "/articles/edit", body)
 			require.NoError(t, err)
 			req.Header.Set("Content-Type", "application/json; charset=utf-8")
 
@@ -116,10 +139,7 @@ func TestArticleHandler_Publish(t *testing.T) {
 			if resp.Code != http.StatusOK {
 				return
 			}
-			assert.Equal(t, testCase.wantRes, Result{
-				Data: 1,
-				Msg:  "ok",
-			})
+			assert.Equal(t, testCase.wantRes, res)
 		})
 	}
 

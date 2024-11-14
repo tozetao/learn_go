@@ -21,6 +21,7 @@ import (
 type MockArticleService struct {
 	ctrl     *gomock.Controller
 	recorder *MockArticleServiceMockRecorder
+	isgomock struct{}
 }
 
 // MockArticleServiceMockRecorder is the mock recorder for MockArticleService.
@@ -53,6 +54,21 @@ func (m *MockArticleService) Publish(ctx context.Context, article domain.Article
 func (mr *MockArticleServiceMockRecorder) Publish(ctx, article any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Publish", reflect.TypeOf((*MockArticleService)(nil).Publish), ctx, article)
+}
+
+// PublishV1 mocks base method.
+func (m *MockArticleService) PublishV1(ctx context.Context, article domain.Article) (int64, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "PublishV1", ctx, article)
+	ret0, _ := ret[0].(int64)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// PublishV1 indicates an expected call of PublishV1.
+func (mr *MockArticleServiceMockRecorder) PublishV1(ctx, article any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PublishV1", reflect.TypeOf((*MockArticleService)(nil).PublishV1), ctx, article)
 }
 
 // Save mocks base method.
