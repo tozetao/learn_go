@@ -38,6 +38,23 @@ err := dao.db.WithContext(ctx).Model(&article).
     }).Error
 return err
 
+
+插入时如果id存在则进行更新，下面的代码会是什么SQL语句。
+
+// clause.OnConflict: 指定发生冲突时的行为。在这里是当列id发生冲突时，应该更新title和content。
+return dao.db.Clauses(clause.OnConflict{
+    Columns: []clause.Column{{Name: "id"}},
+    DoUpdates: clause.Assignments(map[string]interface{}{
+        "title":   article.Title,
+        "content": article.Content,
+    }),
+}).Create(&article).Error
+
+INSERT INTO your_table (id, title, content)
+VALUES (1, 'New Title', 'New Content')
+ON DUPLICATE KEY UPDATE
+title = VALUES(title),
+content = VALUES(content);
 ```
 
 

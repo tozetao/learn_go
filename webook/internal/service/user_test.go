@@ -9,6 +9,7 @@ import (
 	"learn_go/webook/internal/domain"
 	"learn_go/webook/internal/repository"
 	repomocks "learn_go/webook/internal/repository/mocks"
+	"learn_go/webook/pkg/logger"
 	"testing"
 )
 
@@ -116,7 +117,7 @@ func Test_userService_Login(t *testing.T) {
 
 			repo := tc.userRepo(ctrl)
 
-			svc := NewUserService(repo)
+			svc := NewUserService(repo, logger.NewNopLogger())
 
 			gotUser, err := svc.Login(tc.ctx, tc.email, tc.password)
 

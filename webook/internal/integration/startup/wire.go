@@ -52,6 +52,8 @@ var (
 
 		service.NewArticleService,
 		article.NewArticleRepository,
+		article.NewArticleAuthorRepository,
+		article.NewArticleReaderRepository,
 		dao.NewArticleDao,
 	)
 )

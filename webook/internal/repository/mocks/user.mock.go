@@ -84,6 +84,21 @@ func (mr *MockUserRepositoryMockRecorder) FindByID(ctx, id any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FindByID", reflect.TypeOf((*MockUserRepository)(nil).FindByID), ctx, id)
 }
 
+// FindByOpenId mocks base method.
+func (m *MockUserRepository) FindByOpenId(ctx context.Context, openId string) (domain.User, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "FindByOpenId", ctx, openId)
+	ret0, _ := ret[0].(domain.User)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// FindByOpenId indicates an expected call of FindByOpenId.
+func (mr *MockUserRepositoryMockRecorder) FindByOpenId(ctx, openId any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FindByOpenId", reflect.TypeOf((*MockUserRepository)(nil).FindByOpenId), ctx, openId)
+}
+
 // FindByPhone mocks base method.
 func (m *MockUserRepository) FindByPhone(ctx context.Context, phone string) (domain.User, error) {
 	m.ctrl.T.Helper()

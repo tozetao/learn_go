@@ -21,7 +21,6 @@ func NewArticleHandler(svc service.ArticleService, l logger.LoggerV2) *ArticleHa
 }
 
 func (handler *ArticleHandler) Publish(c *gin.Context) {
-
 	var req ArticleReq
 	if c.Bind(&req) != nil {
 		handler.log.Info("binding error during article publication.")
@@ -38,7 +37,7 @@ func (handler *ArticleHandler) Publish(c *gin.Context) {
 
 	articleID, err := handler.svc.Publish(c, req.toDomain(userClaims.Uid))
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, Result{
+		c.JSON(http.StatusOK, Result{
 			Code: 5,
 			Msg:  "failed",
 		})

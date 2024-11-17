@@ -12,7 +12,11 @@ type ReaderRepository interface {
 type articleReaderRepository struct {
 }
 
-func (repo articleReaderRepository) Save(ctx context.Context, article domain.Article) (int64, error) {
+func (repo *articleReaderRepository) Save(ctx context.Context, article domain.Article) (int64, error) {
 	//TODO implement me
 	panic("implement me")
+}
+
+func NewArticleReaderRepository() ReaderRepository {
+	return &articleReaderRepository{}
 }

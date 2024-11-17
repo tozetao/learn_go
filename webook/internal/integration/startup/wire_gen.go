@@ -24,8 +24,10 @@ func InitArticleHandler() *web.ArticleHandler {
 	db := NewDB()
 	articleDao := dao.NewArticleDao(db)
 	articleRepository := article.NewArticleRepository(articleDao)
+	authorRepository := article.NewArticleAuthorRepository()
+	readerRepository := article.NewArticleReaderRepository()
 	loggerV2 := ioc.NewLogger()
-	articleService := service.NewArticleService(articleRepository, loggerV2)
+	articleService := service.NewArticleService(articleRepository, authorRepository, readerRepository, loggerV2)
 	articleHandler := web.NewArticleHandler(articleService, loggerV2)
 	return articleHandler
 }
@@ -61,6 +63,6 @@ var (
 	)
 
 	articleProviders = wire.NewSet(ioc.NewLogger, NewDB,
-		NewRedis, web.NewArticleHandler, service.NewArticleService, article.NewArticleRepository, dao.NewArticleDao,
+		NewRedis, web.NewArticleHandler, service.NewArticleService, article.NewArticleRepository, article.NewArticleAuthorRepository, article.NewArticleReaderRepository, dao.NewArticleDao,
 	)
 )

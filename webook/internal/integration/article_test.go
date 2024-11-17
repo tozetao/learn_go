@@ -8,6 +8,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 	"gorm.io/gorm"
+	"learn_go/webook/internal/domain"
 	"learn_go/webook/internal/integration/startup"
 	"learn_go/webook/internal/repository/dao"
 	"learn_go/webook/internal/web"
@@ -68,11 +69,9 @@ func (s *ArticleTestSuite) TearDownSuite() {
 
 	err := s.db.Exec("truncate table `articles`").Error
 	assert.NoError(t, err)
-}
 
-// 定义测试方法
-func (s *ArticleTestSuite) TestFoo() {
-	s.T().Log("hello, 这是测试套件")
+	err = s.db.Exec("truncate table `publish_articles`").Error
+	assert.NoError(t, err)
 }
 
 func (s *ArticleTestSuite) TestEdit() {
@@ -94,6 +93,16 @@ func (s *ArticleTestSuite) TestEdit() {
 	}{
 		{
 			name: "新建帖子",
+			article: Article{
+				Title:   "hello",
+				Content: "This is content.",
+			},
+
+			wantCode: http.StatusOK,
+			wantRes: Result[int64]{
+				Msg:  "ok",
+				Data: 1,
+			},
 			reqBuilder: func(t *testing.T, article Article) *http.Request {
 				buf, err := json.Marshal(article)
 				assert.NoError(t, err)
@@ -111,28 +120,24 @@ func (s *ArticleTestSuite) TestEdit() {
 
 				// 查询ID=1的记录
 				var article dao.Article
-				var authorID int64 = 1000
-				var articleID int64 = 1
 
-				err := s.db.Where("id", 1).First(&article).Error
+				err := s.db.First(&article).Error
 				assert.NoError(t, err)
 
-				assert.Equal(t, articleID, article.ID)
-				assert.Equal(t, "hello", article.Title)
-				assert.Equal(t, authorID, article.AuthorID)
+				assert.True(t, article.ID > 0)
 				assert.True(t, article.Ctime > 0)
 				assert.True(t, article.Utime > 0)
-			},
 
-			article: Article{
-				Title:   "hello",
-				Content: "This is content.",
-			},
+				article.ID = 0
+				article.Ctime = 0
+				article.Utime = 0
 
-			wantCode: http.StatusOK,
-			wantRes: Result[int64]{
-				Msg:  "ok",
-				Data: 1,
+				assert.Equal(t, dao.Article{
+					Title:    "hello",
+					Content:  "This is content.",
+					AuthorID: 1000,
+					Status:   domain.ArticleStatusUnpublished,
+				}, article)
 			},
 		},
 		{
@@ -150,17 +155,18 @@ func (s *ArticleTestSuite) TestEdit() {
 			},
 
 			article: Article{
-				ID:      3,
-				Title:   "new article",
+				ID:      5,
+				Title:   "new title",
 				Content: "new content",
 			},
 
 			before: func(t *testing.T) {
 				// 要准备一个已经存在的帖子
 				article := dao.Article{
-					ID:       3,
-					Title:    "my article",
-					Content:  "my content",
+					ID:       5,
+					Title:    "title",
+					Content:  "content",
+					Status:   domain.ArticleStatusUnpublished,
 					AuthorID: 1000,
 					Ctime:    123,
 					Utime:    234,
@@ -170,35 +176,34 @@ func (s *ArticleTestSuite) TestEdit() {
 			},
 
 			after: func(t *testing.T) {
-				// 查询ID=1的记录
 				var article dao.Article
-				var authorID int64 = 1000
-				var articleID int64 = 3
 
-				err := s.db.Where("id", articleID).First(&article).Error
+				err := s.db.Where("id", 5).First(&article).Error
 				assert.NoError(t, err)
 
 				// 更新后的时间必定会大于准备的Utime
+				assert.True(t, article.Ctime == 123)
 				assert.True(t, article.Utime > 234)
 				article.Utime = 0
 
 				assert.Equal(t, dao.Article{
-					ID:       articleID,
-					Title:    "new article",
+					ID:       5,
+					Title:    "new title",
 					Content:  "new content",
+					Status:   domain.ArticleStatusUnpublished,
 					Ctime:    123,
-					AuthorID: authorID,
+					AuthorID: 1000,
 				}, article)
 			},
 
 			wantCode: http.StatusOK,
 			wantRes: Result[int64]{
 				Msg:  "ok",
-				Data: 3,
+				Data: 5,
 			},
 		},
 		{
-			name: "修改帖子 - 别人的帖子",
+			name: "修改别人的帖子",
 			reqBuilder: func(t *testing.T, article Article) *http.Request {
 				buf, err := json.Marshal(article)
 				assert.NoError(t, err)
@@ -216,6 +221,11 @@ func (s *ArticleTestSuite) TestEdit() {
 				Title:   "new article",
 				Content: "new content",
 			},
+			wantCode: http.StatusOK,
+			wantRes: Result[int64]{
+				Msg:  "failed",
+				Code: 5,
+			},
 
 			before: func(t *testing.T) {
 				// 插入一个别人的帖子
@@ -223,6 +233,7 @@ func (s *ArticleTestSuite) TestEdit() {
 					ID:       15,
 					Title:    "my article",
 					Content:  "my content",
+					Status:   domain.ArticleStatusPublished,
 					AuthorID: 850,
 					Ctime:    123,
 					Utime:    234,
@@ -232,7 +243,7 @@ func (s *ArticleTestSuite) TestEdit() {
 			},
 
 			after: func(t *testing.T) {
-				// 由于是别人的帖子，修改应该是失败的，因此id=3的帖子的数据是不变的。
+				// 由于是别人的帖子，修改应该是失败的，因此id=15的帖子的数据是不变的。
 
 				var article dao.Article
 				var authorID int64 = 850
@@ -245,16 +256,334 @@ func (s *ArticleTestSuite) TestEdit() {
 					ID:       articleID,
 					Title:    "my article",
 					Content:  "my content",
+					Status:   domain.ArticleStatusPublished,
 					Ctime:    123,
 					Utime:    234,
 					AuthorID: authorID,
 				}, article)
 			},
+		},
+	}
 
-			wantCode: http.StatusInternalServerError,
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			testCase.before(t)
+
+			// 1. 构建请求
+			req := testCase.reqBuilder(t, testCase.article)
+
+			// 2. 处理该请求并写入响应
+			resp := httptest.NewRecorder()
+			s.server.ServeHTTP(resp, req)
+
+			// 3. 校验响应
+			assert.Equal(t, testCase.wantCode, resp.Code)
+
+			var webResult Result[int64]
+			err := json.Unmarshal(resp.Body.Bytes(), &webResult)
+			require.NoError(t, err)
+
+			assert.Equal(t, testCase.wantRes.Msg, webResult.Msg)
+			assert.Equal(t, testCase.wantRes.Code, webResult.Code)
+			assert.Equal(t, testCase.wantRes.Data, webResult.Data)
+
+			testCase.after(t)
+		})
+	}
+}
+
+func (s *ArticleTestSuite) TestPublish() {
+	t := s.T()
+
+	testCases := []struct {
+		name string
+
+		reqBuilder func(t *testing.T, article Article) *http.Request
+		before     func(t *testing.T)
+		after      func(t *testing.T)
+
+		// 输入的数据
+		article Article
+
+		// 期望的输出
+		wantCode int
+		wantRes  Result[int64]
+	}{
+		{
+			name: "新建帖子，发表帖子",
+			article: Article{
+				Title:   "new title",
+				Content: "new content",
+			},
+			wantCode: http.StatusOK,
+			wantRes: Result[int64]{
+				Msg:  "ok",
+				Data: 1,
+			},
+			reqBuilder: func(t *testing.T, article Article) *http.Request {
+				buf, err := json.Marshal(article)
+				assert.NoError(t, err)
+
+				// 构建起请求
+				req, err := http.NewRequest("POST", "/articles/publish", bytes.NewBuffer(buf))
+				assert.NoError(t, err)
+
+				req.Header.Set("Content-Type", "application/json; charset=utf-8")
+				return req
+			},
+			before: func(t *testing.T) {},
+			after: func(t *testing.T) {
+				var article dao.Article
+				err := s.db.First(&article).Error
+				assert.NoError(t, err)
+				assert.True(t, article.ID > 0)
+				assert.True(t, article.Ctime > 0)
+				assert.True(t, article.Utime > 0)
+				article.ID = 0
+				article.Ctime = 0
+				article.Utime = 0
+
+				expectedArt := dao.Article{
+					Title:    "new title",
+					Content:  "new content",
+					AuthorID: 1000,
+					Status:   domain.ArticleStatusPublished,
+				}
+				assert.Equal(t, expectedArt, article)
+
+				var pubArt dao.PublishArticle
+				err = s.db.First(&pubArt).Error
+				assert.NoError(t, err)
+				assert.True(t, pubArt.ID > 0)
+				assert.True(t, pubArt.Ctime > 0)
+				assert.True(t, pubArt.Utime > 0)
+				pubArt.ID = 0
+				pubArt.Ctime = 0
+				pubArt.Utime = 0
+
+				assert.Equal(t, dao.PublishArticle{
+					Article: expectedArt,
+				}, pubArt)
+			},
+		},
+		{
+			name: "编辑帖子，首次发表",
+			article: Article{
+				ID:      15,
+				Title:   "new title",
+				Content: "new content",
+			},
+			wantCode: http.StatusOK,
+			wantRes: Result[int64]{
+				Msg:  "ok",
+				Data: 15,
+			},
+			reqBuilder: func(t *testing.T, article Article) *http.Request {
+				buf, err := json.Marshal(article)
+				assert.NoError(t, err)
+
+				// 构建起请求
+				req, err := http.NewRequest("POST", "/articles/publish", bytes.NewBuffer(buf))
+				assert.NoError(t, err)
+
+				req.Header.Set("Content-Type", "application/json; charset=utf-8")
+				return req
+			},
+			before: func(t *testing.T) {
+				// 制作库插入一条数据
+				err := s.db.Create(&dao.Article{
+					ID:       15,
+					Title:    "my article",
+					Content:  "my content",
+					Status:   domain.ArticleStatusUnpublished,
+					AuthorID: 1000,
+					Ctime:    123,
+					Utime:    456,
+				}).Error
+				require.NoError(t, err)
+			},
+			after: func(t *testing.T) {
+				var article dao.Article
+				err := s.db.Where("id=?", 15).First(&article).Error
+				assert.NoError(t, err)
+
+				assert.True(t, article.Utime > 456)
+				article.Utime = 0
+
+				expectedArt := dao.Article{
+					ID:       15,
+					Title:    "new title",
+					Content:  "new content",
+					AuthorID: 1000,
+					Status:   domain.ArticleStatusPublished,
+					Ctime:    123,
+				}
+				assert.Equal(t, expectedArt, article)
+
+				var pubArt dao.PublishArticle
+				err = s.db.Where("id = ?", 15).First(&pubArt).Error
+				assert.NoError(t, err)
+				assert.True(t, pubArt.Ctime > 0)
+				assert.True(t, pubArt.Utime > 0)
+				pubArt.Ctime = 0
+				pubArt.Utime = 0
+				expectedArt.Ctime = 0
+
+				assert.Equal(t, dao.PublishArticle{
+					Article: expectedArt,
+				}, pubArt)
+			},
+		},
+		{
+			name: "编辑帖子，再次发表",
+			article: Article{
+				ID:      20,
+				Title:   "new title",
+				Content: "new content",
+			},
+			wantCode: http.StatusOK,
+			wantRes: Result[int64]{
+				Msg:  "ok",
+				Data: 20,
+			},
+			reqBuilder: func(t *testing.T, article Article) *http.Request {
+				buf, err := json.Marshal(article)
+				assert.NoError(t, err)
+
+				// 构建起请求
+				req, err := http.NewRequest("POST", "/articles/publish", bytes.NewBuffer(buf))
+				assert.NoError(t, err)
+
+				req.Header.Set("Content-Type", "application/json; charset=utf-8")
+				return req
+			},
+			before: func(t *testing.T) {
+				// 制作库插入一条数据
+				err := s.db.Create(&dao.Article{
+					ID:       20,
+					Title:    "my article",
+					Content:  "my content",
+					Status:   domain.ArticleStatusUnpublished,
+					AuthorID: 1000,
+					Ctime:    123,
+					Utime:    456,
+				}).Error
+				require.NoError(t, err)
+				// 线上库插入一条数据
+				err = s.db.Create(&dao.PublishArticle{
+					Article: dao.Article{
+						ID:       20,
+						Title:    "my article",
+						Content:  "my content",
+						Status:   domain.ArticleStatusPublished,
+						AuthorID: 1000,
+						Ctime:    123,
+						Utime:    456,
+					},
+				}).Error
+				require.NoError(t, err)
+			},
+			after: func(t *testing.T) {
+				var article dao.Article
+				err := s.db.Where("id=?", 20).First(&article).Error
+				assert.NoError(t, err)
+
+				assert.True(t, article.Utime > 456)
+				article.Utime = 0
+
+				expectedArt := dao.Article{
+					ID:       20,
+					Title:    "new title",
+					Content:  "new content",
+					AuthorID: 1000,
+					Status:   domain.ArticleStatusPublished,
+					Ctime:    123,
+				}
+				assert.Equal(t, expectedArt, article)
+
+				var pubArt dao.PublishArticle
+				err = s.db.Where("id = ?", 20).First(&pubArt).Error
+				assert.NoError(t, err)
+				assert.True(t, pubArt.Utime > 0)
+				pubArt.Utime = 0
+
+				assert.Equal(t, dao.PublishArticle{
+					Article: expectedArt,
+				}, pubArt)
+			},
+		},
+		{
+			name: "发表别人帖子",
+			article: Article{
+				ID:      22,
+				Title:   "change title",
+				Content: "change content",
+			},
+			wantCode: http.StatusOK,
 			wantRes: Result[int64]{
 				Msg:  "failed",
 				Code: 5,
+			},
+			reqBuilder: func(t *testing.T, article Article) *http.Request {
+				buf, err := json.Marshal(article)
+				assert.NoError(t, err)
+
+				// 构建起请求
+				req, err := http.NewRequest("POST", "/articles/publish", bytes.NewBuffer(buf))
+				assert.NoError(t, err)
+
+				req.Header.Set("Content-Type", "application/json; charset=utf-8")
+				return req
+			},
+			before: func(t *testing.T) {
+				// 制作库插入一条数据
+				err := s.db.Create(&dao.Article{
+					ID:       22,
+					Title:    "hi",
+					Content:  "welcome back",
+					Status:   domain.ArticleStatusPublished,
+					AuthorID: 900,
+					Ctime:    123,
+					Utime:    456,
+				}).Error
+				require.NoError(t, err)
+				// 线上库插入一条数据
+				err = s.db.Create(&dao.PublishArticle{
+					Article: dao.Article{
+						ID:       22,
+						Title:    "hi",
+						Content:  "welcome back",
+						Status:   domain.ArticleStatusPublished,
+						AuthorID: 900,
+						Ctime:    123,
+						Utime:    456,
+					},
+				}).Error
+				require.NoError(t, err)
+			},
+			after: func(t *testing.T) {
+				var article dao.Article
+				err := s.db.Where("id=?", 22).First(&article).Error
+				assert.NoError(t, err)
+
+				expectedArt := dao.Article{
+					ID:       22,
+					Title:    "hi",
+					Content:  "welcome back",
+					AuthorID: 900,
+					Status:   domain.ArticleStatusPublished,
+					Ctime:    123,
+					Utime:    456,
+				}
+				assert.Equal(t, expectedArt, article)
+
+				var pubArt dao.PublishArticle
+				err = s.db.Where("id = ?", 22).First(&pubArt).Error
+				assert.NoError(t, err)
+
+				assert.Equal(t, dao.PublishArticle{
+					Article: expectedArt,
+				}, pubArt)
 			},
 		},
 	}
