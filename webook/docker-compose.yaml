@@ -1,31 +1,42 @@
 version: "3"
 # 我这个 docker compose 由几个服务组成
 services:
-  mysql8:
-    image: mysql:8.0.29
-    restart: always
-    command: --default-authentication-plugin=mysql_native_password
-    environment:
-      MYSQL_ROOT_PASSWORD: root
-    volumes:
-      #      - 初始化脚本
-      - ./script/mysql/:/docker-entrypoint-initdb.d/
-    ports:
-      #      - 外部访问用 13316
-      - 13316:3306
-  redis:
-    image: "bitnami/redis:latest"
-    restart: always
-    environment:
-      - ALLOW_EMPTY_PASSWORD=yes
-    ports:
-      - '6379:6379'
-  etcd:
-    image: "bitnami/etcd:latest"
-    container_name: "webook-etcd"
+#  mysql8:
+#    image: mysql:8.0.29
+#    restart: always
+#    command: --default-authentication-plugin=mysql_native_password
+#    environment:
+#      MYSQL_ROOT_PASSWORD: root
+#    volumes:
+#      #      - 初始化脚本
+#      - ./script/mysql/:/docker-entrypoint-initdb.d/
+#    ports:
+#      #      - 外部访问用 13316
+#      - 13316:3306
+
+  mongo:
+    image: mongo:6.0
     restart: always
     environment:
-      - ALLOW_NONE_AUTHENTICATION=yes
-      - TZ=Asia/Shanghai
+      MONGO_INITDB_ROOT_USERNAME: root
+      MONGO_INITDB_ROOT_PASSWORD: example
     ports:
-      - "12379:2379"
+      - 27017:27017
+
+#  redis:
+#    image: "bitnami/redis:latest"
+#    restart: always
+#    environment:
+#      - ALLOW_EMPTY_PASSWORD=yes
+#    ports:
+#      - '6379:6379'
+
+#  etcd:
+#    image: "bitnami/etcd:latest"
+#    container_name: "webook-etcd"
+#    restart: always
+#    environment:
+#      - ALLOW_NONE_AUTHENTICATION=yes
+#      - TZ=Asia/Shanghai
+#    ports:
+#      - "12379:2379"

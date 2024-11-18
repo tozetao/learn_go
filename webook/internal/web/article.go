@@ -50,6 +50,43 @@ func (handler *ArticleHandler) Publish(c *gin.Context) {
 	})
 }
 
+func (handler *ArticleHandler) Withdraw(c *gin.Context) {
+	type Req struct {
+		ID int64 `json:"id"`
+	}
+	var req Req
+	if c.Bind(&req) != nil {
+		handler.log.Info("binding error during article publication.")
+		return
+	}
+
+	claimsVal := c.MustGet("user")
+	userClaims, ok := claimsVal.(*UserClaims)
+	if !ok {
+		handler.log.Warn("get user claims error")
+		c.AbortWithStatus(http.StatusInternalServerError)
+		return
+	}
+
+	err := handler.svc.Withdraw(c, domain.Article{
+		ID: req.ID,
+		Author: domain.Author{
+			ID: userClaims.Uid,
+		},
+	})
+	if err != nil {
+		c.JSON(http.StatusOK, Result{
+			Code: 5,
+			Msg:  "failed",
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, Result{
+		Msg: "ok",
+	})
+}
+
 func (handler *ArticleHandler) Edit(c *gin.Context) {
 	var req ArticleReq
 	if c.Bind(&req) != nil {

@@ -2,6 +2,7 @@ package dao
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
@@ -28,6 +29,7 @@ type ArticleDao interface {
 	Insert(ctx context.Context, data Article) (int64, error)
 	UpdateByID(ctx context.Context, article Article) error
 	Sync(ctx context.Context, article Article) (int64, error)
+	SyncStatus(ctx context.Context, id int64, authorID int64, status int8) error
 }
 
 type GORMArticleDao struct {
@@ -75,6 +77,32 @@ func (dao *GORMArticleDao) Sync(ctx context.Context, article Article) (int64, er
 		return err
 	})
 	return id, err
+}
+
+func (dao *GORMArticleDao) SyncStatus(ctx context.Context, id int64, authorID int64, status int8) error {
+	now := time.Now().UnixMilli()
+
+	return dao.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		// 更新制作库
+		res := tx.Model(&Article{}).Where("id=? and author_id=?", id, authorID).
+			Updates(map[string]interface{}{
+				"status": status,
+				"u_time": now,
+			})
+		if res.Error != nil {
+			return res.Error
+		}
+		if res.RowsAffected != 1 {
+			// 用户不可能执行到这里，需要记录日志
+			return errors.New("failed to update article status")
+		}
+
+		// 更新线上库
+		return tx.Model(&PublishArticle{}).Where("id=?", id).Updates(map[string]interface{}{
+			"status": status,
+			"u_time": now,
+		}).Error
+	})
 }
 
 func (dao *GORMArticleDao) Insert(ctx context.Context, article Article) (int64, error) {

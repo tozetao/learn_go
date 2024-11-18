@@ -12,6 +12,8 @@ type ArticleRepository interface {
 
 	Sync(ctx context.Context, article domain.Article) (int64, error)
 
+	SyncStatus(ctx context.Context, id int64, authorID int64, status int8) error
+
 	// SyncV1 在repository层同步数据
 	SyncV1(ctx context.Context, article domain.Article) (int64, error)
 }
@@ -49,6 +51,10 @@ func (repo *articleRepository) SyncV1(ctx context.Context, article domain.Articl
 	article.ID = id
 	err = repo.articleReaderDao.Upsert(ctx, repo.toEntity(article))
 	return id, err
+}
+
+func (repo *articleRepository) SyncStatus(ctx context.Context, id int64, authorID int64, status int8) error {
+	return repo.articleDao.SyncStatus(ctx, id, authorID, status)
 }
 
 func (repo *articleRepository) Create(ctx context.Context, article domain.Article) (int64, error) {

@@ -45,6 +45,8 @@ type ArticleService interface {
 	Publish(ctx context.Context, article domain.Article) (int64, error)
 
 	PublishV1(ctx context.Context, article domain.Article) (int64, error)
+
+	Withdraw(ctx context.Context, article domain.Article) error
 }
 
 type articleService struct {
@@ -55,6 +57,10 @@ type articleService struct {
 	// 与ArticleRepository互斥
 	articleAuthorRepo article.AuthorRepository
 	articleReaderRepo article.ReaderRepository
+}
+
+func (svc *articleService) Withdraw(ctx context.Context, article domain.Article) error {
+	return svc.articleRepo.SyncStatus(ctx, article.ID, article.Author.ID, domain.ArticleStatusPrivate)
 }
 
 func (svc *articleService) Publish(ctx context.Context, article domain.Article) (int64, error) {
