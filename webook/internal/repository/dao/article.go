@@ -10,15 +10,15 @@ import (
 )
 
 type Article struct {
-	ID      int64  `gorm:"primaryKey,authIncrement"`
-	Title   string `gorm:"type=varchar(1024)"`
-	Content string `gorm:"type:blob"`
-	Status  int8   `gorm:"type:tinyint"`
+	ID      int64  `gorm:"primaryKey,authIncrement" bson:"id,omitempty"`
+	Title   string `gorm:"type=varchar(1024)"  bson:"title,omitempty"`
+	Content string `gorm:"type:blob"  bson:"content,omitempty"`
+	Status  int8   `gorm:"type:tinyint"  bson:"status,omitempty"`
 
-	AuthorID int64 `gorm:"index"`
+	AuthorID int64 `gorm:"index"  bson:"author_id,omitempty"`
 
-	Ctime int64 `json:"c_time" gorm:"column:c_time"`
-	Utime int64 `json:"u_time" gorm:"column:u_time"`
+	Ctime int64 `json:"c_time" gorm:"column:c_time"  bson:"c_time,omitempty"`
+	Utime int64 `json:"u_time" gorm:"column:u_time"  bson:"u_time,omitempty"`
 }
 
 type PublishArticle struct {

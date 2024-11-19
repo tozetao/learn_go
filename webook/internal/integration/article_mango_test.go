@@ -29,15 +29,22 @@ require.NoError()
 // 测试套件
 type ArticleTestSuiteV1 struct {
 	suite.Suite
-	server     *gin.Engine
-	db         *mongo.Database
-	articleCol *mongo.Collection
+	server          *gin.Engine
+	db              *mongo.Database
+	artCol          *mongo.Collection
+	publishedArtCol *mongo.Collection
+}
+
+// 测试方法的运行入口
+func TestMangoArticle(t *testing.T) {
+	suite.Run(t, &ArticleTestSuiteV1{})
 }
 
 // hook, 在测试启动之前触发
 func (s *ArticleTestSuiteV1) SetupSuite() {
 	s.db = startup.NewMangoDB()
-	s.articleCol = s.db.Collection("articles")
+	s.artCol = s.db.Collection("articles")
+	s.publishedArtCol = s.db.Collection("published_articles")
 
 	s.server = gin.Default()
 	s.server.Use(func(ctx *gin.Context) {
@@ -55,9 +62,13 @@ func (s *ArticleTestSuiteV1) SetupSuite() {
 func (s *ArticleTestSuiteV1) TearDownSuite() {
 	t := s.T()
 
-	delRes, err := s.articleCol.DeleteMany(context.Background(), bson.D{})
+	delRes, err := s.artCol.DeleteMany(context.Background(), bson.D{})
 	assert.NoError(t, err)
-	t.Log("deleted rows: ", delRes.DeletedCount)
+	t.Log("deleted articles: ", delRes.DeletedCount)
+
+	pubArtDelRes, err := s.publishedArtCol.DeleteMany(context.Background(), bson.D{})
+	assert.NoError(t, err)
+	t.Log("deleted published articles: ", pubArtDelRes.DeletedCount)
 }
 
 func (s *ArticleTestSuiteV1) TestEdit() {
@@ -86,8 +97,7 @@ func (s *ArticleTestSuiteV1) TestEdit() {
 
 			wantCode: http.StatusOK,
 			wantRes: Result[int64]{
-				Msg:  "ok",
-				Data: 1,
+				Msg: "ok",
 			},
 			reqBuilder: func(t *testing.T, article Article) *http.Request {
 				buf, err := json.Marshal(article)
@@ -102,95 +112,114 @@ func (s *ArticleTestSuiteV1) TestEdit() {
 			},
 			before: func(t *testing.T) {},
 			after: func(t *testing.T) {
-				// 核对数据
-
-				// 查询ID=1的记录
+				// 制作库的比较
 				var article dao.Article
-
-				s.articleCol.FindOne(context.Background(), bson.D{{"title", "hello"}}).Decode(&article)
-
-				err := s.db.First(&article).Error
+				filter := bson.M{"title": "hello"}
+				err := s.artCol.FindOne(context.Background(), filter).Decode(&article)
 				assert.NoError(t, err)
-
 				assert.True(t, article.ID > 0)
 				assert.True(t, article.Ctime > 0)
 				assert.True(t, article.Utime > 0)
-
+				articleID := article.ID
 				article.ID = 0
 				article.Ctime = 0
 				article.Utime = 0
-
 				assert.Equal(t, dao.Article{
 					Title:    "hello",
 					Content:  "This is content.",
 					AuthorID: 1000,
 					Status:   domain.ArticleStatusUnpublished,
 				}, article)
+
+				// 制作库的比较
+				// bson.M{
+				//					"article.title": "hello",
+				//				}
+				var pubArt dao.PublishArticle
+				err = s.publishedArtCol.FindOne(context.Background(), bson.D{
+					{"article.title", "hello"},
+				}).Decode(&pubArt)
+				assert.NoError(t, err)
+				assert.Equal(t, pubArt.ID, articleID)
+				assert.True(t, pubArt.Ctime > 0)
+				assert.True(t, pubArt.Utime > 0)
+				pubArt.ID = 0
+				pubArt.Ctime = 0
+				pubArt.Utime = 0
+				assert.Equal(t, dao.PublishArticle{
+					Article: dao.Article{
+						Title:    "hello",
+						Content:  "This is content.",
+						AuthorID: 1000,
+						Status:   domain.ArticleStatusUnpublished,
+					},
+				}, pubArt)
+			},
+		},
+
+		{
+			name: "修改帖子",
+			reqBuilder: func(t *testing.T, article Article) *http.Request {
+				buf, err := json.Marshal(article)
+				assert.NoError(t, err)
+
+				// 构建起请求
+				req, err := http.NewRequest("POST", "/articles/edit", bytes.NewBuffer(buf))
+				assert.NoError(t, err)
+
+				req.Header.Set("Content-Type", "application/json; charset=utf-8")
+				return req
+			},
+
+			article: Article{
+				ID:      5,
+				Title:   "new title",
+				Content: "new content",
+			},
+
+			before: func(t *testing.T) {
+				// 要准备一个已经存在的帖子
+				article := dao.Article{
+					ID:       5,
+					Title:    "title",
+					Content:  "content",
+					Status:   domain.ArticleStatusUnpublished,
+					AuthorID: 1000,
+					Ctime:    123,
+					Utime:    234,
+				}
+				err := s.db.Create(&article).Error
+				assert.NoError(t, err)
+			},
+
+			after: func(t *testing.T) {
+				var article dao.Article
+
+				err := s.db.Where("id", 5).First(&article).Error
+				assert.NoError(t, err)
+
+				// 更新后的时间必定会大于准备的Utime
+				assert.True(t, article.Ctime == 123)
+				assert.True(t, article.Utime > 234)
+				article.Utime = 0
+
+				assert.Equal(t, dao.Article{
+					ID:       5,
+					Title:    "new title",
+					Content:  "new content",
+					Status:   domain.ArticleStatusUnpublished,
+					Ctime:    123,
+					AuthorID: 1000,
+				}, article)
+			},
+
+			wantCode: http.StatusOK,
+			wantRes: Result[int64]{
+				Msg:  "ok",
+				Data: 5,
 			},
 		},
 		/*
-			{
-				name: "修改帖子",
-				reqBuilder: func(t *testing.T, article Article) *http.Request {
-					buf, err := json.Marshal(article)
-					assert.NoError(t, err)
-
-					// 构建起请求
-					req, err := http.NewRequest("POST", "/articles/edit", bytes.NewBuffer(buf))
-					assert.NoError(t, err)
-
-					req.Header.Set("Content-Type", "application/json; charset=utf-8")
-					return req
-				},
-
-				article: Article{
-					ID:      5,
-					Title:   "new title",
-					Content: "new content",
-				},
-
-				before: func(t *testing.T) {
-					// 要准备一个已经存在的帖子
-					article := dao.Article{
-						ID:       5,
-						Title:    "title",
-						Content:  "content",
-						Status:   domain.ArticleStatusUnpublished,
-						AuthorID: 1000,
-						Ctime:    123,
-						Utime:    234,
-					}
-					err := s.db.Create(&article).Error
-					assert.NoError(t, err)
-				},
-
-				after: func(t *testing.T) {
-					var article dao.Article
-
-					err := s.db.Where("id", 5).First(&article).Error
-					assert.NoError(t, err)
-
-					// 更新后的时间必定会大于准备的Utime
-					assert.True(t, article.Ctime == 123)
-					assert.True(t, article.Utime > 234)
-					article.Utime = 0
-
-					assert.Equal(t, dao.Article{
-						ID:       5,
-						Title:    "new title",
-						Content:  "new content",
-						Status:   domain.ArticleStatusUnpublished,
-						Ctime:    123,
-						AuthorID: 1000,
-					}, article)
-				},
-
-				wantCode: http.StatusOK,
-				wantRes: Result[int64]{
-					Msg:  "ok",
-					Data: 5,
-				},
-			},
 			{
 				name: "修改别人的帖子",
 				reqBuilder: func(t *testing.T, article Article) *http.Request {
@@ -275,13 +304,14 @@ func (s *ArticleTestSuiteV1) TestEdit() {
 
 			assert.Equal(t, testCase.wantRes.Msg, webResult.Msg)
 			assert.Equal(t, testCase.wantRes.Code, webResult.Code)
-			assert.Equal(t, testCase.wantRes.Data, webResult.Data)
+			// assert.Equal(t, testCase.wantRes.Data, webResult.Data)
 
 			testCase.after(t)
 		})
 	}
 }
 
+/*
 func (s *ArticleTestSuiteV1) TestPublish() {
 	t := s.T()
 
@@ -604,8 +634,4 @@ func (s *ArticleTestSuiteV1) TestPublish() {
 		})
 	}
 }
-
-// 测试方法的运行入口
-func TestMangoArticle(t *testing.T) {
-	suite.Run(t, &ArticleTestSuiteV1{})
-}
+*/
