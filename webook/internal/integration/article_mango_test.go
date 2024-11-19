@@ -2,12 +2,14 @@ package integration
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
-	"gorm.io/gorm"
+	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/mongo"
 	"learn_go/webook/internal/domain"
 	"learn_go/webook/internal/integration/startup"
 	"learn_go/webook/internal/repository/dao"
@@ -24,32 +26,18 @@ require.NoError()
 	断言一个错误值是否为nil。如果为nil，测试会终止，不会执行后面的代码。
 */
 
-type Article struct {
-	ID      int64  `json:"id"`
-	Title   string `json:"title"`
-	Content string `json:"content"`
-	//// 作者
-	AuthorID int64 `json:"author_id"`
-	Ctime    int64 `json:"c_time"`
-	Utime    int64 `json:"u_time"`
-}
-
-type Result[T any] struct {
-	Code int    `json:"code"`
-	Msg  string `json:"msg"`
-	Data T      `json:"data"`
-}
-
 // 测试套件
-type ArticleTestSuite struct {
+type ArticleTestSuiteV1 struct {
 	suite.Suite
-	server *gin.Engine
-	db     *gorm.DB
+	server     *gin.Engine
+	db         *mongo.Database
+	articleCol *mongo.Collection
 }
 
 // hook, 在测试启动之前触发
-func (s *ArticleTestSuite) SetupSuite() {
-	s.db = startup.NewDB()
+func (s *ArticleTestSuiteV1) SetupSuite() {
+	s.db = startup.NewMangoDB()
+	s.articleCol = s.db.Collection("articles")
 
 	s.server = gin.Default()
 	s.server.Use(func(ctx *gin.Context) {
@@ -59,22 +47,20 @@ func (s *ArticleTestSuite) SetupSuite() {
 	})
 
 	// 新建handler
-	handler := startup.InitArticleHandler()
+	handler := startup.InitArticleHandlerV1()
 	// 注册路由
 	handler.RegisterRoutes(s.server)
 }
 
-func (s *ArticleTestSuite) TearDownSuite() {
+func (s *ArticleTestSuiteV1) TearDownSuite() {
 	t := s.T()
 
-	err := s.db.Exec("truncate table `articles`").Error
+	delRes, err := s.articleCol.DeleteMany(context.Background(), bson.D{})
 	assert.NoError(t, err)
-
-	err = s.db.Exec("truncate table `publish_articles`").Error
-	assert.NoError(t, err)
+	t.Log("deleted rows: ", delRes.DeletedCount)
 }
 
-func (s *ArticleTestSuite) TestEdit() {
+func (s *ArticleTestSuiteV1) TestEdit() {
 	t := s.T()
 
 	testCases := []struct {
@@ -121,6 +107,8 @@ func (s *ArticleTestSuite) TestEdit() {
 				// 查询ID=1的记录
 				var article dao.Article
 
+				s.articleCol.FindOne(context.Background(), bson.D{{"title", "hello"}}).Decode(&article)
+
 				err := s.db.First(&article).Error
 				assert.NoError(t, err)
 
@@ -140,129 +128,131 @@ func (s *ArticleTestSuite) TestEdit() {
 				}, article)
 			},
 		},
-		{
-			name: "修改帖子",
-			reqBuilder: func(t *testing.T, article Article) *http.Request {
-				buf, err := json.Marshal(article)
-				assert.NoError(t, err)
+		/*
+			{
+				name: "修改帖子",
+				reqBuilder: func(t *testing.T, article Article) *http.Request {
+					buf, err := json.Marshal(article)
+					assert.NoError(t, err)
 
-				// 构建起请求
-				req, err := http.NewRequest("POST", "/articles/edit", bytes.NewBuffer(buf))
-				assert.NoError(t, err)
+					// 构建起请求
+					req, err := http.NewRequest("POST", "/articles/edit", bytes.NewBuffer(buf))
+					assert.NoError(t, err)
 
-				req.Header.Set("Content-Type", "application/json; charset=utf-8")
-				return req
+					req.Header.Set("Content-Type", "application/json; charset=utf-8")
+					return req
+				},
+
+				article: Article{
+					ID:      5,
+					Title:   "new title",
+					Content: "new content",
+				},
+
+				before: func(t *testing.T) {
+					// 要准备一个已经存在的帖子
+					article := dao.Article{
+						ID:       5,
+						Title:    "title",
+						Content:  "content",
+						Status:   domain.ArticleStatusUnpublished,
+						AuthorID: 1000,
+						Ctime:    123,
+						Utime:    234,
+					}
+					err := s.db.Create(&article).Error
+					assert.NoError(t, err)
+				},
+
+				after: func(t *testing.T) {
+					var article dao.Article
+
+					err := s.db.Where("id", 5).First(&article).Error
+					assert.NoError(t, err)
+
+					// 更新后的时间必定会大于准备的Utime
+					assert.True(t, article.Ctime == 123)
+					assert.True(t, article.Utime > 234)
+					article.Utime = 0
+
+					assert.Equal(t, dao.Article{
+						ID:       5,
+						Title:    "new title",
+						Content:  "new content",
+						Status:   domain.ArticleStatusUnpublished,
+						Ctime:    123,
+						AuthorID: 1000,
+					}, article)
+				},
+
+				wantCode: http.StatusOK,
+				wantRes: Result[int64]{
+					Msg:  "ok",
+					Data: 5,
+				},
 			},
+			{
+				name: "修改别人的帖子",
+				reqBuilder: func(t *testing.T, article Article) *http.Request {
+					buf, err := json.Marshal(article)
+					assert.NoError(t, err)
 
-			article: Article{
-				ID:      5,
-				Title:   "new title",
-				Content: "new content",
+					// 构建起请求
+					req, err := http.NewRequest("POST", "/articles/edit", bytes.NewBuffer(buf))
+					assert.NoError(t, err)
+
+					req.Header.Set("Content-Type", "application/json; charset=utf-8")
+					return req
+				},
+
+				article: Article{
+					ID:      15,
+					Title:   "new article",
+					Content: "new content",
+				},
+				wantCode: http.StatusOK,
+				wantRes: Result[int64]{
+					Msg:  "failed",
+					Code: 5,
+				},
+
+				before: func(t *testing.T) {
+					// 插入一个别人的帖子
+					article := dao.Article{
+						ID:       15,
+						Title:    "my article",
+						Content:  "my content",
+						Status:   domain.ArticleStatusPublished,
+						AuthorID: 850,
+						Ctime:    123,
+						Utime:    234,
+					}
+					err := s.db.Create(&article).Error
+					assert.NoError(t, err)
+				},
+
+				after: func(t *testing.T) {
+					// 由于是别人的帖子，修改应该是失败的，因此id=15的帖子的数据是不变的。
+
+					var article dao.Article
+					var authorID int64 = 850
+					var articleID int64 = 15
+
+					err := s.db.Where("id", articleID).First(&article).Error
+					assert.NoError(t, err)
+
+					assert.Equal(t, dao.Article{
+						ID:       articleID,
+						Title:    "my article",
+						Content:  "my content",
+						Status:   domain.ArticleStatusPublished,
+						Ctime:    123,
+						Utime:    234,
+						AuthorID: authorID,
+					}, article)
+				},
 			},
-
-			before: func(t *testing.T) {
-				// 要准备一个已经存在的帖子
-				article := dao.Article{
-					ID:       5,
-					Title:    "title",
-					Content:  "content",
-					Status:   domain.ArticleStatusUnpublished,
-					AuthorID: 1000,
-					Ctime:    123,
-					Utime:    234,
-				}
-				err := s.db.Create(&article).Error
-				assert.NoError(t, err)
-			},
-
-			after: func(t *testing.T) {
-				var article dao.Article
-
-				err := s.db.Where("id", 5).First(&article).Error
-				assert.NoError(t, err)
-
-				// 更新后的时间必定会大于准备的Utime
-				assert.True(t, article.Ctime == 123)
-				assert.True(t, article.Utime > 234)
-				article.Utime = 0
-
-				assert.Equal(t, dao.Article{
-					ID:       5,
-					Title:    "new title",
-					Content:  "new content",
-					Status:   domain.ArticleStatusUnpublished,
-					Ctime:    123,
-					AuthorID: 1000,
-				}, article)
-			},
-
-			wantCode: http.StatusOK,
-			wantRes: Result[int64]{
-				Msg:  "ok",
-				Data: 5,
-			},
-		},
-		{
-			name: "修改别人的帖子",
-			reqBuilder: func(t *testing.T, article Article) *http.Request {
-				buf, err := json.Marshal(article)
-				assert.NoError(t, err)
-
-				// 构建起请求
-				req, err := http.NewRequest("POST", "/articles/edit", bytes.NewBuffer(buf))
-				assert.NoError(t, err)
-
-				req.Header.Set("Content-Type", "application/json; charset=utf-8")
-				return req
-			},
-
-			article: Article{
-				ID:      15,
-				Title:   "new article",
-				Content: "new content",
-			},
-			wantCode: http.StatusOK,
-			wantRes: Result[int64]{
-				Msg:  "failed",
-				Code: 5,
-			},
-
-			before: func(t *testing.T) {
-				// 插入一个别人的帖子
-				article := dao.Article{
-					ID:       15,
-					Title:    "my article",
-					Content:  "my content",
-					Status:   domain.ArticleStatusPublished,
-					AuthorID: 850,
-					Ctime:    123,
-					Utime:    234,
-				}
-				err := s.db.Create(&article).Error
-				assert.NoError(t, err)
-			},
-
-			after: func(t *testing.T) {
-				// 由于是别人的帖子，修改应该是失败的，因此id=15的帖子的数据是不变的。
-
-				var article dao.Article
-				var authorID int64 = 850
-				var articleID int64 = 15
-
-				err := s.db.Where("id", articleID).First(&article).Error
-				assert.NoError(t, err)
-
-				assert.Equal(t, dao.Article{
-					ID:       articleID,
-					Title:    "my article",
-					Content:  "my content",
-					Status:   domain.ArticleStatusPublished,
-					Ctime:    123,
-					Utime:    234,
-					AuthorID: authorID,
-				}, article)
-			},
-		},
+		*/
 	}
 
 	for _, testCase := range testCases {
@@ -292,7 +282,7 @@ func (s *ArticleTestSuite) TestEdit() {
 	}
 }
 
-func (s *ArticleTestSuite) TestPublish() {
+func (s *ArticleTestSuiteV1) TestPublish() {
 	t := s.T()
 
 	testCases := []struct {
@@ -616,6 +606,6 @@ func (s *ArticleTestSuite) TestPublish() {
 }
 
 // 测试方法的运行入口
-func TestArticle(t *testing.T) {
-	suite.Run(t, &ArticleTestSuite{})
+func TestMangoArticle(t *testing.T) {
+	suite.Run(t, &ArticleTestSuiteV1{})
 }

@@ -56,10 +56,29 @@ var (
 		article.NewArticleReaderRepository,
 		dao.NewArticleDao,
 	)
+
+	articleProvidersV1 = wire.NewSet(
+		NewDB,
+		NewRedis,
+		NewMangoDB,
+		ioc.NewLogger,
+		web.NewArticleHandler,
+
+		service.NewArticleService,
+		article.NewArticleRepository,
+		article.NewArticleAuthorRepository,
+		article.NewArticleReaderRepository,
+		dao.NewMongoArticleDao,
+	)
 )
 
 func InitArticleHandler() *web.ArticleHandler {
 	wire.Build(articleProviders)
+	return &web.ArticleHandler{}
+}
+
+func InitArticleHandlerV1() *web.ArticleHandler {
+	wire.Build(articleProvidersV1)
 	return &web.ArticleHandler{}
 }
 

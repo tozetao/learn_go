@@ -4,10 +4,10 @@ import (
 	"context"
 	"fmt"
 	"github.com/stretchr/testify/assert"
-	"go.mongodb.org/mongo-driver/v2/bson"
-	"go.mongodb.org/mongo-driver/v2/event"
-	"go.mongodb.org/mongo-driver/v2/mongo"
-	"go.mongodb.org/mongo-driver/v2/mongo/options"
+	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/event"
+	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
 	"testing"
 	"time"
 )
@@ -35,7 +35,7 @@ func TestCURD(t *testing.T) {
 	}
 	opts := options.Client().ApplyURI("mongodb://root:example@localhost:27017").SetMonitor(&monitor)
 
-	client, err := mongo.Connect(opts)
+	client, err := mongo.Connect(ctx, opts)
 	assert.NoError(t, err)
 
 	collection := client.Database("webook").Collection("articles")
@@ -54,7 +54,10 @@ func TestCURD(t *testing.T) {
 
 	// 查询
 	var art Article
-	filter := bson.D{bson.E{Key: "id", Value: 1}}
+	// filter := bson.D{bson.E{Key: "id", Value: 1}}
+	filter := bson.M{
+		"id": 1,
+	}
 	err = collection.FindOne(ctx, filter).Decode(&art)
 	if err == mongo.ErrNoDocuments {
 		fmt.Println("找不到id=1的article")
@@ -64,15 +67,24 @@ func TestCURD(t *testing.T) {
 	}
 
 	// 更新
-	sets := bson.D{bson.E{Key: "$set", Value: bson.E{Key: "title", Value: "new title."}}}
-	updateRes, err := collection.UpdateMany(ctx, filter, sets)
+	// set := bson.D{bson.E{Key: "$set", Value: bson.E{Key: "title", Value: "new title."}}}
+	set := bson.D{bson.E{Key: "$set", Value: bson.M{
+		"title": "新的标题",
+	}}}
+	// updateFilter := bson.M{"id": 1}
+	updateFilter := bson.D{bson.E{Key: "id", Value: 1}}
+	updateRes, err := collection.UpdateOne(ctx, updateFilter, set)
 	assert.NoError(t, err)
-	fmt.Println("更新行数：", updateRes.ModifiedCount)
+	t.Log("更新行数：", updateRes.ModifiedCount)
+
+	updateManyRes, err := collection.UpdateMany(ctx, updateFilter, bson.D{bson.E{
+		Key: "$set", Value: bson.M{"content": "新的内容"},
+	}})
+	assert.NoError(t, err)
+	t.Log("更新行数：", updateManyRes.ModifiedCount)
 
 	// 删除
-	defer func() {
-		delRes, err := collection.DeleteMany(ctx, bson.D{})
-		assert.NoError(t, err)
-		fmt.Println("deleted count: ", delRes.DeletedCount)
-	}()
+	delRes, err := collection.DeleteMany(ctx, bson.D{})
+	assert.NoError(t, err)
+	t.Log("deleted count: ", delRes.DeletedCount)
 }

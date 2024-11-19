@@ -32,6 +32,18 @@ func InitArticleHandler() *web.ArticleHandler {
 	return articleHandler
 }
 
+func InitArticleHandlerV1() *web.ArticleHandler {
+	database := NewMangoDB()
+	articleDao := dao.NewMongoArticleDao(database)
+	articleRepository := article.NewArticleRepository(articleDao)
+	authorRepository := article.NewArticleAuthorRepository()
+	readerRepository := article.NewArticleReaderRepository()
+	loggerV2 := ioc.NewLogger()
+	articleService := service.NewArticleService(articleRepository, authorRepository, readerRepository, loggerV2)
+	articleHandler := web.NewArticleHandler(articleService, loggerV2)
+	return articleHandler
+}
+
 func InitWebServer(templateId string) *gin.Engine {
 	cmdable := NewRedis()
 	jwtHandler := web.NewJWTHandler(cmdable)
@@ -64,5 +76,11 @@ var (
 
 	articleProviders = wire.NewSet(ioc.NewLogger, NewDB,
 		NewRedis, web.NewArticleHandler, service.NewArticleService, article.NewArticleRepository, article.NewArticleAuthorRepository, article.NewArticleReaderRepository, dao.NewArticleDao,
+	)
+
+	articleProvidersV1 = wire.NewSet(
+		NewDB,
+		NewRedis,
+		NewMangoDB, ioc.NewLogger, web.NewArticleHandler, service.NewArticleService, article.NewArticleRepository, article.NewArticleAuthorRepository, article.NewArticleReaderRepository, dao.NewMongoArticleDao,
 	)
 )
