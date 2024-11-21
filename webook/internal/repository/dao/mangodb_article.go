@@ -2,9 +2,11 @@ package dao
 
 import (
 	"context"
+	"errors"
 	"github.com/bwmarrin/snowflake"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
 	"time"
 )
 
@@ -16,11 +18,7 @@ type MangoDBArticleDao struct {
 	node            *snowflake.Node
 }
 
-func NewMongoArticleDao(db *mongo.Database) ArticleDao {
-	node, err := snowflake.NewNode(1)
-	if err != nil {
-		panic(err)
-	}
+func NewMongoArticleDao(db *mongo.Database, node *snowflake.Node) ArticleDao {
 	return &MangoDBArticleDao{
 		db:              db,
 		artCol:          db.Collection("articles"),
@@ -35,16 +33,7 @@ func (dao *MangoDBArticleDao) Insert(ctx context.Context, article Article) (int6
 	article.Ctime = now
 	article.Utime = now
 
-	// 先插入制作库
 	_, err := dao.artCol.InsertOne(ctx, article)
-	if err != nil {
-		return 0, err
-	}
-	// 再插入线上库
-	pubArt := PublishArticle{
-		Article: article,
-	}
-	_, err = dao.publishedArtCol.InsertOne(ctx, pubArt)
 	if err != nil {
 		return 0, err
 	}
@@ -52,7 +41,6 @@ func (dao *MangoDBArticleDao) Insert(ctx context.Context, article Article) (int6
 }
 
 func (dao *MangoDBArticleDao) UpdateByID(ctx context.Context, article Article) error {
-	// 先更新制作库
 	now := time.Now().UnixMilli()
 	article.Utime = now
 	filter := bson.D{{"id", article.ID}, {"author_id", article.AuthorID}}
@@ -60,26 +48,90 @@ func (dao *MangoDBArticleDao) UpdateByID(ctx context.Context, article Article) e
 		{"$set", bson.D{
 			{"title", article.Title},
 			{"content", article.Content},
+			{"status", article.Status},
 			{"u_time", now},
 		}},
 	}
-	_, err := dao.artCol.UpdateOne(ctx, filter, set)
+	res, err := dao.artCol.UpdateOne(ctx, filter, set)
 	if err != nil {
 		return err
 	}
-	_, err = dao.publishedArtCol.UpdateOne(ctx, bson.D{
-		{"id", article.ID},
-	}, set)
-	if err != nil {
-		return err
+	if res.ModifiedCount != 1 {
+		return errors.New("failed to update article")
 	}
 	return nil
 }
 
 func (dao *MangoDBArticleDao) Sync(ctx context.Context, article Article) (int64, error) {
-	panic("implement me")
+	// 先更新制作库
+	var (
+		err error
+		id  = article.ID
+	)
+	if article.ID > 0 {
+		err = dao.UpdateByID(ctx, article)
+	} else {
+		id, err = dao.Insert(ctx, article)
+	}
+	if err != nil {
+		return 0, err
+	}
+
+	article.ID = id
+
+	now := time.Now().UnixMilli()
+	pubArt := PublishArticle(article)
+	pubArt.Ctime = now
+	pubArt.Utime = now
+	filter := bson.M{"id": id}
+	set := bson.D{
+		{"$setOnInsert", bson.D{
+			{"id", pubArt.ID},
+			{"author_id", pubArt.AuthorID},
+			{"c_time", pubArt.Ctime},
+		}},
+		{"$set", bson.D{
+			{"title", pubArt.Title},
+			{"content", pubArt.Content},
+			{"status", pubArt.Status},
+			{"u_time", pubArt.Utime},
+		}},
+	}
+	_, err = dao.publishedArtCol.UpdateOne(
+		ctx, filter, set, options.Update().SetUpsert(true))
+	if err != nil {
+		return 0, err
+	}
+	return article.ID, nil
 }
 
 func (dao *MangoDBArticleDao) SyncStatus(ctx context.Context, id int64, authorID int64, status int8) error {
-	panic("implement me")
+	// 先更新制作库
+	var (
+		err error
+	)
+	now := time.Now().UnixMilli()
+	filter := bson.D{
+		{"id", id},
+		{"author_id", authorID},
+	}
+	set := bson.D{
+		{"$set", bson.D{
+			{"status", status},
+			{"u_time", now},
+		}},
+	}
+	artRes, err := dao.artCol.UpdateOne(ctx, filter, status)
+	if err != nil {
+		return err
+	}
+	if artRes.ModifiedCount != 1 {
+		// id、author_id不一致，要记录错误日志，告警。
+		return errors.New("failed to update status")
+	}
+
+	_, err = dao.publishedArtCol.UpdateOne(ctx, bson.M{
+		"id": id,
+	}, set)
+	return err
 }

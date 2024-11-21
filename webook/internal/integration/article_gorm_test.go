@@ -345,9 +345,7 @@ func (s *ArticleTestSuite) TestPublish() {
 				pubArt.Ctime = 0
 				pubArt.Utime = 0
 
-				assert.Equal(t, dao.PublishArticle{
-					Article: expectedArt,
-				}, pubArt)
+				assert.Equal(t, dao.PublishArticle(expectedArt), pubArt)
 			},
 		},
 		{
@@ -413,9 +411,7 @@ func (s *ArticleTestSuite) TestPublish() {
 				pubArt.Utime = 0
 				expectedArt.Ctime = 0
 
-				assert.Equal(t, dao.PublishArticle{
-					Article: expectedArt,
-				}, pubArt)
+				assert.Equal(t, dao.PublishArticle(expectedArt), pubArt)
 			},
 		},
 		{
@@ -455,15 +451,13 @@ func (s *ArticleTestSuite) TestPublish() {
 				require.NoError(t, err)
 				// 线上库插入一条数据
 				err = s.db.Create(&dao.PublishArticle{
-					Article: dao.Article{
-						ID:       20,
-						Title:    "my article",
-						Content:  "my content",
-						Status:   domain.ArticleStatusPublished,
-						AuthorID: 1000,
-						Ctime:    123,
-						Utime:    456,
-					},
+					ID:       20,
+					Title:    "my article",
+					Content:  "my content",
+					Status:   domain.ArticleStatusPublished,
+					AuthorID: 1000,
+					Ctime:    123,
+					Utime:    456,
 				}).Error
 				require.NoError(t, err)
 			},
@@ -491,9 +485,7 @@ func (s *ArticleTestSuite) TestPublish() {
 				assert.True(t, pubArt.Utime > 0)
 				pubArt.Utime = 0
 
-				assert.Equal(t, dao.PublishArticle{
-					Article: expectedArt,
-				}, pubArt)
+				assert.Equal(t, dao.PublishArticle(expectedArt), pubArt)
 			},
 		},
 		{
@@ -533,15 +525,13 @@ func (s *ArticleTestSuite) TestPublish() {
 				require.NoError(t, err)
 				// 线上库插入一条数据
 				err = s.db.Create(&dao.PublishArticle{
-					Article: dao.Article{
-						ID:       22,
-						Title:    "hi",
-						Content:  "welcome back",
-						Status:   domain.ArticleStatusPublished,
-						AuthorID: 900,
-						Ctime:    123,
-						Utime:    456,
-					},
+					ID:       22,
+					Title:    "hi",
+					Content:  "welcome back",
+					Status:   domain.ArticleStatusPublished,
+					AuthorID: 900,
+					Ctime:    123,
+					Utime:    456,
 				}).Error
 				require.NoError(t, err)
 			},
@@ -565,9 +555,7 @@ func (s *ArticleTestSuite) TestPublish() {
 				err = s.db.Where("id = ?", 22).First(&pubArt).Error
 				assert.NoError(t, err)
 
-				assert.Equal(t, dao.PublishArticle{
-					Article: expectedArt,
-				}, pubArt)
+				assert.Equal(t, dao.PublishArticle(expectedArt), pubArt)
 			},
 		},
 	}

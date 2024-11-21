@@ -4,6 +4,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"learn_go/webook/internal/domain"
 	"learn_go/webook/internal/service"
+	"learn_go/webook/pkg/ginx"
 	"learn_go/webook/pkg/logger"
 	"net/http"
 )
@@ -20,34 +21,30 @@ func NewArticleHandler(svc service.ArticleService, l logger.LoggerV2) *ArticleHa
 	}
 }
 
-func (handler *ArticleHandler) Publish(c *gin.Context) {
-	var req ArticleReq
-	if c.Bind(&req) != nil {
-		handler.log.Info("binding error during article publication.")
-		return
-	}
-
-	claimsVal, _ := c.Get("user")
-	userClaims, ok := claimsVal.(*UserClaims)
-	if !ok {
-		handler.log.Warn("get user claims error")
-		c.AbortWithStatus(http.StatusInternalServerError)
-		return
-	}
-
-	articleID, err := handler.svc.Publish(c, req.toDomain(userClaims.Uid))
+func (handler *ArticleHandler) Publish(c *gin.Context, req ArticleReq, claims *UserClaims) (ginx.Result, error) {
+	//var req ArticleReq
+	//if c.Bind(&req) != nil {
+	//	handler.log.Info("binding error during article publication.")
+	//	return
+	//}
+	//claimsVal, _ := c.Get("user")
+	//userClaims, ok := claimsVal.(*UserClaims)
+	//if !ok {
+	//	handler.log.Warn("get user claims error")
+	//	c.AbortWithStatus(http.StatusInternalServerError)
+	//	return
+	//}
+	articleID, err := handler.svc.Publish(c, req.toDomain(claims.Uid))
 	if err != nil {
-		c.JSON(http.StatusOK, Result{
+		return ginx.Result{
 			Code: 5,
 			Msg:  "failed",
-		})
-		return
+		}, err
 	}
-
-	c.JSON(http.StatusOK, Result{
+	return ginx.Result{
 		Msg:  "ok",
 		Data: articleID,
-	})
+	}, nil
 }
 
 func (handler *ArticleHandler) Withdraw(c *gin.Context) {
@@ -120,7 +117,7 @@ func (handler *ArticleHandler) Edit(c *gin.Context) {
 func (handler *ArticleHandler) RegisterRoutes(server *gin.Engine) {
 	g := server.Group("/articles")
 	g.POST("/edit", handler.Edit)
-	g.POST("/publish", handler.Publish)
+	g.POST("/publish", ginx.WrapBodyAndClaims(handler.Publish))
 }
 
 type ArticleReq struct {

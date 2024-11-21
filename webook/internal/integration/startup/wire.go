@@ -68,7 +68,6 @@ var (
 		article.NewArticleRepository,
 		article.NewArticleAuthorRepository,
 		article.NewArticleReaderRepository,
-		dao.NewMongoArticleDao,
 	)
 )
 
@@ -77,7 +76,7 @@ func InitArticleHandler() *web.ArticleHandler {
 	return &web.ArticleHandler{}
 }
 
-func InitArticleHandlerV1() *web.ArticleHandler {
+func InitArticleHandlerV1(articleDao dao.ArticleDao) *web.ArticleHandler {
 	wire.Build(articleProvidersV1)
 	return &web.ArticleHandler{}
 }

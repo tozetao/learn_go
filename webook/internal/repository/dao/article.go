@@ -21,28 +21,34 @@ type Article struct {
 	Utime int64 `json:"u_time" gorm:"column:u_time"  bson:"u_time,omitempty"`
 }
 
-type PublishArticle struct {
-	Article
-}
+type PublishArticle Article
+
+//type PublishArticle struct {
+//	Article
+//}
 
 type ArticleDao interface {
+	// Insert 向制作库插入数据
 	Insert(ctx context.Context, data Article) (int64, error)
+	// UpdateByID 更新制作库数据
 	UpdateByID(ctx context.Context, article Article) error
+	// Sync 同步制作库、线上库数据
 	Sync(ctx context.Context, article Article) (int64, error)
+	// SyncStatus 同步制作库、线上库的文章状态
 	SyncStatus(ctx context.Context, id int64, authorID int64, status int8) error
 }
 
-type GORMArticleDao struct {
+type ArticleGORMDao struct {
 	db *gorm.DB
 }
 
 func NewArticleDao(db *gorm.DB) ArticleDao {
-	return &GORMArticleDao{
+	return &ArticleGORMDao{
 		db: db,
 	}
 }
 
-func (dao *GORMArticleDao) Sync(ctx context.Context, article Article) (int64, error) {
+func (dao *ArticleGORMDao) Sync(ctx context.Context, article Article) (int64, error) {
 	var (
 		id  = article.ID
 		err error
@@ -60,7 +66,7 @@ func (dao *GORMArticleDao) Sync(ctx context.Context, article Article) (int64, er
 		}
 		article.ID = id
 
-		pubArt := PublishArticle{Article: article}
+		pubArt := PublishArticle(article)
 		now := time.Now().UnixMilli()
 		pubArt.Ctime = now
 		pubArt.Utime = now
@@ -79,7 +85,7 @@ func (dao *GORMArticleDao) Sync(ctx context.Context, article Article) (int64, er
 	return id, err
 }
 
-func (dao *GORMArticleDao) SyncStatus(ctx context.Context, id int64, authorID int64, status int8) error {
+func (dao *ArticleGORMDao) SyncStatus(ctx context.Context, id int64, authorID int64, status int8) error {
 	now := time.Now().UnixMilli()
 
 	return dao.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
@@ -105,7 +111,7 @@ func (dao *GORMArticleDao) SyncStatus(ctx context.Context, id int64, authorID in
 	})
 }
 
-func (dao *GORMArticleDao) Insert(ctx context.Context, article Article) (int64, error) {
+func (dao *ArticleGORMDao) Insert(ctx context.Context, article Article) (int64, error) {
 	now := time.Now()
 
 	article.Ctime = now.UnixMilli()
@@ -115,7 +121,7 @@ func (dao *GORMArticleDao) Insert(ctx context.Context, article Article) (int64, 
 	return article.ID, err
 }
 
-func (dao *GORMArticleDao) UpdateByID(ctx context.Context, article Article) error {
+func (dao *ArticleGORMDao) UpdateByID(ctx context.Context, article Article) error {
 	now := time.Now().UnixMilli()
 	article.Utime = now
 

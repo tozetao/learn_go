@@ -32,9 +32,7 @@ func InitArticleHandler() *web.ArticleHandler {
 	return articleHandler
 }
 
-func InitArticleHandlerV1() *web.ArticleHandler {
-	database := NewMangoDB()
-	articleDao := dao.NewMongoArticleDao(database)
+func InitArticleHandlerV1(articleDao dao.ArticleDao) *web.ArticleHandler {
 	articleRepository := article.NewArticleRepository(articleDao)
 	authorRepository := article.NewArticleAuthorRepository()
 	readerRepository := article.NewArticleReaderRepository()
@@ -81,6 +79,6 @@ var (
 	articleProvidersV1 = wire.NewSet(
 		NewDB,
 		NewRedis,
-		NewMangoDB, ioc.NewLogger, web.NewArticleHandler, service.NewArticleService, article.NewArticleRepository, article.NewArticleAuthorRepository, article.NewArticleReaderRepository, dao.NewMongoArticleDao,
+		NewMangoDB, ioc.NewLogger, web.NewArticleHandler, service.NewArticleService, article.NewArticleRepository, article.NewArticleAuthorRepository, article.NewArticleReaderRepository,
 	)
 )
