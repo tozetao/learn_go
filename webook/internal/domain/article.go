@@ -1,11 +1,16 @@
 package domain
 
+import "time"
+
 type Article struct {
 	ID      int64
 	Title   string
 	Content string
 	Author  Author
 	Status  ArticleStatus
+
+	CTime time.Time
+	UTime time.Time
 }
 
 type Author struct {

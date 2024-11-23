@@ -2,8 +2,10 @@ package article
 
 import (
 	"context"
+	"github.com/ecodeclub/ekit/slice"
 	"learn_go/webook/internal/domain"
 	"learn_go/webook/internal/repository/dao"
+	"time"
 )
 
 type ArticleRepository interface {
@@ -16,6 +18,8 @@ type ArticleRepository interface {
 
 	// SyncV1 在repository层同步数据
 	SyncV1(ctx context.Context, article domain.Article) (int64, error)
+
+	GetByAuthor(ctx context.Context, uid int64, offset int, limit int) ([]domain.Article, error)
 }
 
 func NewArticleRepository(articleDao dao.ArticleDao) ArticleRepository {
@@ -27,6 +31,26 @@ type articleRepository struct {
 
 	articleAuthorDao dao.ArticleAuthorDao
 	articleReaderDao dao.ArticleReaderDao
+}
+
+func (repo *articleRepository) GetByAuthor(ctx context.Context, uid int64, offset int, limit int) ([]domain.Article, error) {
+	articles, err := repo.articleDao.GetByAuthor(ctx, uid, offset, limit)
+	if err != nil {
+		return nil, err
+	}
+	return slice.Map(articles, func(idx int, src dao.Article) domain.Article {
+		return domain.Article{
+			ID:      src.ID,
+			Title:   src.Title,
+			Content: src.Content,
+			Author: domain.Author{
+				ID: src.AuthorID,
+			},
+			Status: domain.ArticleStatus(src.Status),
+			CTime:  time.UnixMilli(src.Ctime),
+			UTime:  time.UnixMilli(src.Utime),
+		}
+	}), nil
 }
 
 func (repo *articleRepository) Sync(ctx context.Context, article domain.Article) (int64, error) {

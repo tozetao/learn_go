@@ -12,9 +12,11 @@ import (
 	"learn_go/webook/internal/integration/startup"
 	"learn_go/webook/internal/repository/dao"
 	"learn_go/webook/internal/web"
+	"learn_go/webook/pkg/ginx"
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 )
 
 /*
@@ -581,6 +583,118 @@ func (s *ArticleTestSuite) TestPublish() {
 			assert.Equal(t, testCase.wantRes.Msg, webResult.Msg)
 			assert.Equal(t, testCase.wantRes.Code, webResult.Code)
 			assert.Equal(t, testCase.wantRes.Data, webResult.Data)
+
+			testCase.after(t)
+		})
+	}
+}
+
+func (s *ArticleTestSuite) TestArticleList() {
+	t := s.T()
+
+	testCases := []struct {
+		name string
+
+		req        web.ListReq
+		reqBuilder func(t *testing.T, req web.ListReq) *http.Request
+		before     func(t *testing.T)
+		after      func(t *testing.T)
+
+		// 期望的输出
+		wantCode int
+		wantRes  ginx.Result
+	}{
+		{
+			name:     "查询接口测试",
+			wantCode: http.StatusOK,
+			wantRes: ginx.Result{
+				Msg: "ok",
+				Data: []web.ArticleVO{
+					{
+						ID:      1,
+						Title:   "title1",
+						Content: "content1",
+						CTime:   "2024-10-1 11:00:10",
+						UTime:   "2024-10-2 12:00:20",
+					},
+					{
+						ID:      2,
+						Title:   "title2",
+						Content: "content2",
+						CTime:   "2024-5-1 11:00:10",
+						UTime:   "2024-5-2 12:00:20",
+					},
+				},
+			},
+			reqBuilder: func(t *testing.T, listReq web.ListReq) *http.Request {
+				buf, err := json.Marshal(listReq)
+				assert.NoError(t, err)
+
+				// 构建起请求
+				req, err := http.NewRequest("POST", "/articles/list", bytes.NewBuffer(buf))
+				assert.NoError(t, err)
+
+				req.Header.Set("Content-Type", "application/json; charset=utf-8")
+				return req
+			},
+			before: func(t *testing.T) {
+				// 查询一些测试数据
+				c1, err := time.Parse(time.DateTime, "2024-10-1 11:00:10")
+				assert.NoError(t, err)
+				u1, err := time.Parse(time.DateTime, "2024-10-2 12:00:20")
+				assert.NoError(t, err)
+
+				c2, err := time.Parse(time.DateTime, "2024-5-1 11:00:10")
+				assert.NoError(t, err)
+				u2, err := time.Parse(time.DateTime, "2024-5-2 12:00:20")
+				assert.NoError(t, err)
+
+				arts := []dao.Article{
+					{
+						ID:      1,
+						Title:   "title1",
+						Content: "content1",
+						Ctime:   c1.UnixMilli(),
+						Utime:   u1.UnixMilli(),
+					},
+					{
+						ID:      2,
+						Title:   "title2",
+						Content: "content2",
+						Ctime:   c2.UnixMilli(),
+						Utime:   u2.UnixMilli(),
+					},
+				}
+				s.db.Create(&arts[0])
+			},
+			after: func(t *testing.T) {
+			},
+		},
+	}
+
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			testCase.before(t)
+
+			// 1. 构建请求
+			req := testCase.reqBuilder(t, testCase.req)
+
+			// 2. 处理该请求并写入响应
+			resp := httptest.NewRecorder()
+			s.server.ServeHTTP(resp, req)
+
+			// 3. 校验响应
+			assert.Equal(t, testCase.wantCode, resp.Code)
+
+			var webResult ginx.Result
+			err := json.Unmarshal(resp.Body.Bytes(), &webResult)
+			require.NoError(t, err)
+
+			assert.Equal(t, testCase.wantRes.Msg, webResult.Msg)
+
+			arts, ok := webResult.Data.([]web.ArticleVO)
+			require.True(t, ok)
+			assert.True(t, len(arts) > 0)
 
 			testCase.after(t)
 		})

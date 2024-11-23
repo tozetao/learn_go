@@ -51,3 +51,21 @@ func WrapBodyAndClaims[Request any, Claims any](fn func(c *gin.Context, req Requ
 		c.JSON(200, res)
 	}
 }
+
+func WrapClaims[Claims any](fn func(c *gin.Context, claims Claims) (Result, error)) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		claimsVal := c.MustGet("user")
+		userClaims, ok := claimsVal.(Claims)
+		if !ok {
+			L.Warn("get user claims error")
+			c.AbortWithStatus(http.StatusInternalServerError)
+			return
+		}
+
+		res, err := fn(c, userClaims)
+		if err != nil {
+			L.Error("执行业务失败", logger.Error(err))
+		}
+		c.JSON(200, res)
+	}
+}

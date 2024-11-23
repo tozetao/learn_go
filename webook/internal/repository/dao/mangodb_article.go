@@ -27,6 +27,10 @@ func NewMongoArticleDao(db *mongo.Database, node *snowflake.Node) ArticleDao {
 	}
 }
 
+func (dao *MangoDBArticleDao) GetByAuthor(ctx context.Context, uid int64, offset int, limit int) ([]Article, error) {
+	panic("implement me")
+}
+
 func (dao *MangoDBArticleDao) Insert(ctx context.Context, article Article) (int64, error) {
 	article.ID = dao.node.Generate().Int64()
 	now := time.Now().UnixMilli()

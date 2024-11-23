@@ -36,6 +36,7 @@ type ArticleDao interface {
 	Sync(ctx context.Context, article Article) (int64, error)
 	// SyncStatus 同步制作库、线上库的文章状态
 	SyncStatus(ctx context.Context, id int64, authorID int64, status int8) error
+	GetByAuthor(ctx context.Context, uid int64, offset int, limit int) ([]Article, error)
 }
 
 type ArticleGORMDao struct {
@@ -46,6 +47,19 @@ func NewArticleDao(db *gorm.DB) ArticleDao {
 	return &ArticleGORMDao{
 		db: db,
 	}
+}
+
+func (dao *ArticleGORMDao) GetByAuthor(ctx context.Context, uid int64, offset int, limit int) ([]Article, error) {
+	var articles []Article
+
+	err := dao.db.Model(&Article{}).Where("author_id = ?", uid).
+		Offset(offset).
+		Limit(limit).
+		Find(&articles).Error
+	if err != nil {
+		return nil, err
+	}
+	return articles, nil
 }
 
 func (dao *ArticleGORMDao) Sync(ctx context.Context, article Article) (int64, error) {

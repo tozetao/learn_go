@@ -47,6 +47,8 @@ type ArticleService interface {
 	PublishV1(ctx context.Context, article domain.Article) (int64, error)
 
 	Withdraw(ctx context.Context, article domain.Article) error
+
+	GetList(ctx context.Context, uid int64, offset int, limit int) ([]domain.Article, error)
 }
 
 type articleService struct {
@@ -57,6 +59,10 @@ type articleService struct {
 	// 与ArticleRepository互斥
 	articleAuthorRepo article.AuthorRepository
 	articleReaderRepo article.ReaderRepository
+}
+
+func (svc *articleService) GetList(ctx context.Context, uid int64, offset int, limit int) ([]domain.Article, error) {
+	return svc.articleRepo.GetByAuthor(ctx, uid, offset, limit)
 }
 
 func (svc *articleService) Withdraw(ctx context.Context, article domain.Article) error {
