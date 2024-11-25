@@ -52,12 +52,12 @@ func NewArticleDao(db *gorm.DB) ArticleDao {
 func (dao *ArticleGORMDao) GetByAuthor(ctx context.Context, uid int64, offset int, limit int) ([]Article, error) {
 	var articles []Article
 
-	err := dao.db.Model(&Article{}).Where("author_id = ?", uid).
+	res := dao.db.Model(&Article{}).Where("author_id = ?", uid).
 		Offset(offset).
 		Limit(limit).
-		Find(&articles).Error
-	if err != nil {
-		return nil, err
+		Find(&articles)
+	if res.Error != nil {
+		return nil, res.Error
 	}
 	return articles, nil
 }

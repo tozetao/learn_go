@@ -142,4 +142,9 @@ func (handler *ArticleHandler) RegisterRoutes(server *gin.Engine) {
 	g := server.Group("/articles")
 	g.POST("/edit", handler.Edit)
 	g.POST("/publish", ginx.WrapBodyAndClaims(handler.Publish))
+
+	// 查询作者的文章列表
+	g.GET("/list", ginx.WrapBodyAndClaims(handler.List))
+	// 查询作者的文章详情
+	// g.GET("/detail", ginx.)
 }

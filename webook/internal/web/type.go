@@ -11,8 +11,8 @@ type ArticleVO struct {
 }
 
 type ListReq struct {
-	Offset int
-	Limit  int
+	Offset int `form:"offset"`
+	Limit  int `form:"limit"`
 }
 
 type ArticleReq struct {

@@ -31,9 +31,16 @@ func WrapBody[Request any](fn func(req Request) (Result, error)) gin.HandlerFunc
 func WrapBodyAndClaims[Request any, Claims any](fn func(c *gin.Context, req Request, claims Claims) (Result, error)) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		var req Request
-		if c.Bind(&req) != nil {
-			L.Info("binding error during article publication.")
-			return
+		if c.Request.Method == "GET" {
+			if err := c.ShouldBindQuery(&req); err != nil {
+				L.Info("binding error.", logger.Error(err))
+				return
+			}
+		} else {
+			if err := c.Bind(&req); err != nil {
+				L.Info("binding error", logger.Error(err))
+				return
+			}
 		}
 
 		claimsVal := c.MustGet("user")

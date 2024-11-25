@@ -15,6 +15,8 @@ import (
 	"learn_go/webook/pkg/ginx"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
+	"strconv"
 	"testing"
 	"time"
 )
@@ -48,16 +50,22 @@ func (s *ArticleTestSuite) SetupSuite() {
 	handler := startup.InitArticleHandler()
 	// 注册路由
 	handler.RegisterRoutes(s.server)
+
+	t := s.T()
+	err := s.db.Exec("truncate table `articles`").Error
+	assert.NoError(t, err)
+	err = s.db.Exec("truncate table `publish_articles`").Error
+	assert.NoError(t, err)
 }
 
 func (s *ArticleTestSuite) TearDownSuite() {
-	t := s.T()
-
-	err := s.db.Exec("truncate table `articles`").Error
-	assert.NoError(t, err)
-
-	err = s.db.Exec("truncate table `publish_articles`").Error
-	assert.NoError(t, err)
+	//t := s.T()
+	//
+	//err := s.db.Exec("truncate table `articles`").Error
+	//assert.NoError(t, err)
+	//
+	//err = s.db.Exec("truncate table `publish_articles`").Error
+	//assert.NoError(t, err)
 }
 
 func (s *ArticleTestSuite) TestEdit() {
@@ -605,7 +613,11 @@ func (s *ArticleTestSuite) TestArticleList() {
 		wantRes  ginx.Result
 	}{
 		{
-			name:     "查询接口测试",
+			name: "查询接口测试",
+			req: web.ListReq{
+				Offset: 0,
+				Limit:  10,
+			},
 			wantCode: http.StatusOK,
 			wantRes: ginx.Result{
 				Msg: "ok",
@@ -614,58 +626,62 @@ func (s *ArticleTestSuite) TestArticleList() {
 						ID:      1,
 						Title:   "title1",
 						Content: "content1",
-						CTime:   "2024-10-1 11:00:10",
-						UTime:   "2024-10-2 12:00:20",
+						CTime:   "2024-10-01 11:00:10",
+						UTime:   "2024-10-02 12:00:20",
 					},
 					{
 						ID:      2,
 						Title:   "title2",
 						Content: "content2",
-						CTime:   "2024-5-1 11:00:10",
-						UTime:   "2024-5-2 12:00:20",
+						CTime:   "2024-05-01 11:00:10",
+						UTime:   "2024-05-02 12:00:20",
 					},
 				},
 			},
 			reqBuilder: func(t *testing.T, listReq web.ListReq) *http.Request {
-				buf, err := json.Marshal(listReq)
-				assert.NoError(t, err)
+				//buf, err := json.Marshal(listReq)
+				//assert.NoError(t, err)
 
+				params := url.Values{}
+				params.Add("limit", strconv.Itoa(listReq.Limit))
+				params.Add("offset", strconv.Itoa(listReq.Offset))
 				// 构建起请求
-				req, err := http.NewRequest("POST", "/articles/list", bytes.NewBuffer(buf))
+				req, err := http.NewRequest("GET", "/articles/list?"+params.Encode(), nil)
 				assert.NoError(t, err)
-
-				req.Header.Set("Content-Type", "application/json; charset=utf-8")
+				// req.Header.Set("Content-Type", "application/json; charset=utf-8")
 				return req
 			},
 			before: func(t *testing.T) {
-				// 查询一些测试数据
-				c1, err := time.Parse(time.DateTime, "2024-10-1 11:00:10")
+				// 插入一些测试数据
+				c1, err := time.Parse(time.DateTime, "2024-10-01 11:00:10")
 				assert.NoError(t, err)
-				u1, err := time.Parse(time.DateTime, "2024-10-2 12:00:20")
+				u1, err := time.Parse(time.DateTime, "2024-10-02 12:00:20")
 				assert.NoError(t, err)
 
-				c2, err := time.Parse(time.DateTime, "2024-5-1 11:00:10")
+				c2, err := time.Parse(time.DateTime, "2024-05-01 11:00:10")
 				assert.NoError(t, err)
-				u2, err := time.Parse(time.DateTime, "2024-5-2 12:00:20")
+				u2, err := time.Parse(time.DateTime, "2024-05-02 12:00:20")
 				assert.NoError(t, err)
 
 				arts := []dao.Article{
 					{
-						ID:      1,
-						Title:   "title1",
-						Content: "content1",
-						Ctime:   c1.UnixMilli(),
-						Utime:   u1.UnixMilli(),
+						ID:       3,
+						Title:    "title1",
+						Content:  "content1",
+						Ctime:    c1.UnixMilli(),
+						Utime:    u1.UnixMilli(),
+						AuthorID: 1000,
 					},
 					{
-						ID:      2,
-						Title:   "title2",
-						Content: "content2",
-						Ctime:   c2.UnixMilli(),
-						Utime:   u2.UnixMilli(),
+						ID:       4,
+						Title:    "title2",
+						Content:  "content2",
+						Ctime:    c2.UnixMilli(),
+						Utime:    u2.UnixMilli(),
+						AuthorID: 1000,
 					},
 				}
-				s.db.Create(&arts[0])
+				s.db.Create(&arts)
 			},
 			after: func(t *testing.T) {
 			},
@@ -686,13 +702,14 @@ func (s *ArticleTestSuite) TestArticleList() {
 			// 3. 校验响应
 			assert.Equal(t, testCase.wantCode, resp.Code)
 
+			body := resp.Body.Bytes()
 			var webResult ginx.Result
-			err := json.Unmarshal(resp.Body.Bytes(), &webResult)
+			err := json.Unmarshal(body, &webResult)
 			require.NoError(t, err)
 
 			assert.Equal(t, testCase.wantRes.Msg, webResult.Msg)
 
-			arts, ok := webResult.Data.([]web.ArticleVO)
+			arts, ok := webResult.Data.([]interface{})
 			require.True(t, ok)
 			assert.True(t, len(arts) > 0)
 
