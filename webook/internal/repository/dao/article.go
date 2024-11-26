@@ -37,6 +37,9 @@ type ArticleDao interface {
 	// SyncStatus 同步制作库、线上库的文章状态
 	SyncStatus(ctx context.Context, id int64, authorID int64, status int8) error
 	GetByAuthor(ctx context.Context, uid int64, offset int, limit int) ([]Article, error)
+	GetByID(ctx context.Context, id int64) (Article, error)
+	ListPub(ctx context.Context, start time.Time, offset int, limit int) ([]Article, error)
+	GetPubByID(ctx context.Context, id int64) (PublishArticle, error)
 }
 
 type ArticleGORMDao struct {
@@ -49,10 +52,37 @@ func NewArticleDao(db *gorm.DB) ArticleDao {
 	}
 }
 
+const (
+	ArticleStatusPublished = 2
+)
+
+func (dao *ArticleGORMDao) GetPubByID(ctx context.Context, id int64) (PublishArticle, error) {
+	var article PublishArticle
+	err := dao.db.WithContext(ctx).Model(&PublishArticle{}).Where("id=?", id).First(&article).Error
+	return article, err
+}
+
+func (dao *ArticleGORMDao) ListPub(ctx context.Context, start time.Time, offset int, limit int) ([]Article, error) {
+	var articles []Article
+
+	err := dao.db.WithContext(ctx).Model(&Article{}).
+		Where("start < ? and status = ?", start.UnixMilli(), ArticleStatusPublished).
+		Offset(offset).
+		Limit(limit).
+		Find(&articles).Error
+	return articles, err
+}
+
+func (dao *ArticleGORMDao) GetByID(ctx context.Context, id int64) (Article, error) {
+	var article Article
+	err := dao.db.WithContext(ctx).Model(&Article{}).Where("id = ? ", id).First(&article).Error
+	return article, err
+}
+
 func (dao *ArticleGORMDao) GetByAuthor(ctx context.Context, uid int64, offset int, limit int) ([]Article, error) {
 	var articles []Article
 
-	res := dao.db.Model(&Article{}).Where("author_id = ?", uid).
+	res := dao.db.WithContext(ctx).Model(&Article{}).Where("author_id = ?", uid).
 		Offset(offset).
 		Limit(limit).
 		Find(&articles)

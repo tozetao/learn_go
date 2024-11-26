@@ -684,6 +684,8 @@ func (s *ArticleTestSuite) TestArticleList() {
 				s.db.Create(&arts)
 			},
 			after: func(t *testing.T) {
+				// 验证redis缓存是否有数据
+
 			},
 		},
 	}

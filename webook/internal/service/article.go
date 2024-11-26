@@ -6,6 +6,7 @@ import (
 	"learn_go/webook/internal/domain"
 	"learn_go/webook/internal/repository/article"
 	"learn_go/webook/pkg/logger"
+	"time"
 )
 
 /*
@@ -49,6 +50,10 @@ type ArticleService interface {
 	Withdraw(ctx context.Context, article domain.Article) error
 
 	GetList(ctx context.Context, uid int64, offset int, limit int) ([]domain.Article, error)
+	GetByID(ctx context.Context, id int64) (domain.Article, error)
+
+	ListPub(c context.Context, time time.Time, offset int, limit int) ([]domain.Article, error)
+	GetPubArticle(ctx context.Context, id int64) (domain.Article, error)
 }
 
 type articleService struct {
@@ -61,8 +66,20 @@ type articleService struct {
 	articleReaderRepo article.ReaderRepository
 }
 
+func (svc *articleService) ListPub(ctx context.Context, t time.Time, offset int, limit int) ([]domain.Article, error) {
+	return svc.articleRepo.ListPub(ctx, t, offset, limit)
+}
+
 func (svc *articleService) GetList(ctx context.Context, uid int64, offset int, limit int) ([]domain.Article, error) {
 	return svc.articleRepo.GetByAuthor(ctx, uid, offset, limit)
+}
+
+func (svc *articleService) GetByID(ctx context.Context, articleID int64) (domain.Article, error) {
+	return svc.articleRepo.GetByID(ctx, articleID)
+}
+
+func (svc *articleService) GetPubArticle(ctx context.Context, articleID int64) (domain.Article, error) {
+	return svc.articleRepo.GetPubByID(ctx, articleID)
 }
 
 func (svc *articleService) Withdraw(ctx context.Context, article domain.Article) error {

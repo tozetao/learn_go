@@ -23,20 +23,24 @@ import (
 func InitArticleHandler() *web.ArticleHandler {
 	db := NewDB()
 	articleDao := dao.NewArticleDao(db)
-	articleRepository := article.NewArticleRepository(articleDao)
+	loggerV2 := ioc.NewLogger()
+	cmdable := NewRedis()
+	articleCache := cache.NewArticleCache(cmdable)
+	articleRepository := article.NewArticleRepository(articleDao, loggerV2, articleCache)
 	authorRepository := article.NewArticleAuthorRepository()
 	readerRepository := article.NewArticleReaderRepository()
-	loggerV2 := ioc.NewLogger()
 	articleService := service.NewArticleService(articleRepository, authorRepository, readerRepository, loggerV2)
 	articleHandler := web.NewArticleHandler(articleService, loggerV2)
 	return articleHandler
 }
 
 func InitArticleHandlerV1(articleDao dao.ArticleDao) *web.ArticleHandler {
-	articleRepository := article.NewArticleRepository(articleDao)
+	loggerV2 := ioc.NewLogger()
+	cmdable := NewRedis()
+	articleCache := cache.NewArticleCache(cmdable)
+	articleRepository := article.NewArticleRepository(articleDao, loggerV2, articleCache)
 	authorRepository := article.NewArticleAuthorRepository()
 	readerRepository := article.NewArticleReaderRepository()
-	loggerV2 := ioc.NewLogger()
 	articleService := service.NewArticleService(articleRepository, authorRepository, readerRepository, loggerV2)
 	articleHandler := web.NewArticleHandler(articleService, loggerV2)
 	return articleHandler
@@ -73,12 +77,12 @@ var (
 	)
 
 	articleProviders = wire.NewSet(ioc.NewLogger, NewDB,
-		NewRedis, web.NewArticleHandler, service.NewArticleService, article.NewArticleRepository, article.NewArticleAuthorRepository, article.NewArticleReaderRepository, dao.NewArticleDao,
+		NewRedis, dao.NewArticleDao, cache.NewArticleCache, article.NewArticleRepository, article.NewArticleAuthorRepository, article.NewArticleReaderRepository, service.NewArticleService, web.NewArticleHandler,
 	)
 
 	articleProvidersV1 = wire.NewSet(
 		NewDB,
 		NewRedis,
-		NewMangoDB, ioc.NewLogger, web.NewArticleHandler, service.NewArticleService, article.NewArticleRepository, article.NewArticleAuthorRepository, article.NewArticleReaderRepository,
+		NewMangoDB, ioc.NewLogger, cache.NewArticleCache, article.NewArticleRepository, article.NewArticleAuthorRepository, article.NewArticleReaderRepository, web.NewArticleHandler, service.NewArticleService,
 	)
 )

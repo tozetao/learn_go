@@ -48,13 +48,15 @@ var (
 		ioc.NewLogger,
 		NewDB,
 		NewRedis,
-		web.NewArticleHandler,
+		dao.NewArticleDao,
+		cache.NewArticleCache,
 
-		service.NewArticleService,
 		article.NewArticleRepository,
 		article.NewArticleAuthorRepository,
 		article.NewArticleReaderRepository,
-		dao.NewArticleDao,
+
+		service.NewArticleService,
+		web.NewArticleHandler,
 	)
 
 	articleProvidersV1 = wire.NewSet(
@@ -62,12 +64,14 @@ var (
 		NewRedis,
 		NewMangoDB,
 		ioc.NewLogger,
-		web.NewArticleHandler,
 
-		service.NewArticleService,
+		cache.NewArticleCache,
 		article.NewArticleRepository,
 		article.NewArticleAuthorRepository,
 		article.NewArticleReaderRepository,
+
+		web.NewArticleHandler,
+		service.NewArticleService,
 	)
 )
 
