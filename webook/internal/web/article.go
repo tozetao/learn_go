@@ -261,6 +261,8 @@ func (handler *ArticleHandler) RegisterRoutes(server *gin.Engine) {
 
 	pub := g.Group("/pub")
 	pub.GET("/details/:id", handler.PubDetail)
+
+	// 点赞接口
 }
 
 /*
