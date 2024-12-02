@@ -2,6 +2,7 @@ package domain
 
 import "time"
 
+// Interaction 资源交互对象
 type Interaction struct {
 	ID    int64
 	Biz   string
@@ -15,7 +16,8 @@ type Interaction struct {
 	Favorites int64
 }
 
-type ArticleLike struct {
+// UserLike 用户点赞对象
+type UserLike struct {
 	ID int64
 
 	Uid   int64

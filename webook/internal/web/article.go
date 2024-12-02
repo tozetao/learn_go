@@ -1,6 +1,7 @@
 package web
 
 import (
+	"errors"
 	"github.com/ecodeclub/ekit/slice"
 	"github.com/gin-gonic/gin"
 	"learn_go/webook/internal/domain"
@@ -236,8 +237,31 @@ func (handler *ArticleHandler) PubDetail(c *gin.Context) {
 	})
 }
 
-//func (handler *ArticleHandler) Like(c *gin.Context, req LikeReq, userClaims *UserClaims) (ginx.Result, error)  {
-//}
+func (handler *ArticleHandler) Like(c *gin.Context, req LikeReq, userClaims *UserClaims) (ginx.Result, error) {
+	var err error
+	if req.Action == ArticleLike {
+		err = handler.interSvc.Like(c, userClaims.Uid, req.ArticleID)
+	} else {
+		err = handler.interSvc.CancelLike(c, userClaims.Uid, req.ArticleID)
+	}
+	if err != nil {
+		return ginx.Result{
+			Code: 5,
+			Msg:  "failed",
+		}, errors.New("点赞或取消点赞失败")
+	}
+	return ginx.Result{
+		Msg: "success",
+	}, nil
+}
+
+func (handler *ArticleHandler) Favorite(ctx *gin.Context, req FavoriteReq, userClaims *UserClaims) (ginx.Result, error) {
+	err := handler.interSvc.Favorite(ctx, userClaims.Uid, req.FavoriteID, req.ArticleID)
+	if err != nil {
+		return ginx.Result{Code: 5, Msg: "save error"}, errors.New("failed")
+	}
+	return ginx.Result{Msg: "ok"}, nil
+}
 
 func (handler *ArticleHandler) ToVO(src domain.Article) ArticleVO {
 	return ArticleVO{
@@ -259,10 +283,14 @@ func (handler *ArticleHandler) RegisterRoutes(server *gin.Engine) {
 	// 查询作者的文章详情
 	g.GET("/detail/:id", handler.Detail)
 
+	// 已发布文章接口
 	pub := g.Group("/pub")
 	pub.GET("/details/:id", handler.PubDetail)
 
 	// 点赞接口
+	g.POST("/like", ginx.WrapBodyAndClaims[LikeReq, *UserClaims](handler.Like))
+
+	//g.POST("/favorite", ginx.)
 }
 
 /*
@@ -322,6 +350,22 @@ Interaction
 
 	id, biz, biz_id, type,
 	通过type来区分不同的指标，因此写入性能会好些，但是读取差，因为同个资源的多个指标需要从磁盘上随机读，无法顺序读（比如查看后再点赞，俩条记录会相差的比较远）
+
+
+
+
+收藏接口的实现
+
+
+文章的交互数据的获取
+	交互数据的获取可以有俩种方式：
+	1. 将Interaction领域对象作为Article领域对象的值对象，从概念上来说，这些交互数据的获取要在Article Repository层面上来解决问题。
+	2. 新建一个service，聚合article、interaction服务来完成数据的组装。我们这里直接在handler层面上来聚合服务了。
+
+
+interactionService
+	Liked
+	collected
 
 
 */

@@ -16,8 +16,12 @@ var (
 type InteractionCache interface {
 	IncrReadCnt(ctx context.Context, biz string, bizID int64) error
 
+	// IncrLikeCnt IncrLikeCntIfPresent
 	IncrLikeCnt(ctx context.Context, biz string, bizID int64) error
 	DecrLikeCnt(ctx context.Context, biz string, bizID int64) error
+
+	IncrFavoriteCnt(ctx context.Context, biz string, bizID int64) error
+	DecrFavoriteCnt(ctx context.Context, biz string, bizID int64) error
 }
 
 type interactionCache struct {
@@ -36,18 +40,24 @@ func (cache *interactionCache) key(biz string, bizID int64) string {
 
 // IncrReadCnt lua脚本逻辑：只有在key存在的情况下戏赠。key存在意味着有人访问了该文章，缓存中已经载入数据库中该文章的阅读量，因此可以在自增加1。
 func (cache *interactionCache) IncrReadCnt(ctx context.Context, biz string, bizID int64) error {
-	res, err := cache.cmd.Eval(ctx, script, []string{cache.key(biz, bizID)}, []any{"read_cnt", 1}).Result()
-	// 我们不关注lua脚本执行的结果，脚本中已经判定了只有key存在值才会自增
-	fmt.Printf("incr read_cnt: %v\n", res)
+	_, err := cache.cmd.Eval(ctx, script, []string{cache.key(biz, bizID)}, []any{"read_cnt", 1}).Result()
 	return err
+	// 我们不关注lua脚本执行的结果，脚本中已经判定了只有key存在值才会自增
+	//fmt.Printf("incr read_cnt: %v\n", res)
 }
 
 func (cache *interactionCache) IncrLikeCnt(ctx context.Context, biz string, bizID int64) error {
-	//TODO implement me
-	panic("implement me")
+	return cache.cmd.Eval(ctx, script, []string{cache.key(biz, bizID)}, []any{"likes", 1}).Err()
 }
 
 func (cache *interactionCache) DecrLikeCnt(ctx context.Context, biz string, bizID int64) error {
-	//TODO implement me
-	panic("implement me")
+	return cache.cmd.Eval(ctx, script, []string{cache.key(biz, bizID)}, []any{"likes", -1}).Err()
+}
+
+func (cache *interactionCache) IncrFavoriteCnt(ctx context.Context, biz string, bizID int64) error {
+	return cache.cmd.Eval(ctx, script, []string{cache.key(biz, bizID)}, []any{"favorites", 1}).Err()
+}
+
+func (cache *interactionCache) DecrFavoriteCnt(ctx context.Context, biz string, bizID int64) error {
+	return cache.cmd.Eval(ctx, script, []string{cache.key(biz, bizID)}, []any{"favorites", -1}).Err()
 }
