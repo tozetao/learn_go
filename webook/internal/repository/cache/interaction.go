@@ -3,8 +3,11 @@ package cache
 import (
 	"context"
 	_ "embed"
+	"encoding/json"
 	"fmt"
 	"github.com/redis/go-redis/v9"
+	"learn_go/webook/internal/domain"
+	"time"
 )
 
 var (
@@ -22,6 +25,27 @@ type InteractionCache interface {
 
 	IncrFavoriteCnt(ctx context.Context, biz string, bizID int64) error
 	DecrFavoriteCnt(ctx context.Context, biz string, bizID int64) error
+
+	Get(ctx context.Context, biz string, bizID int64) (domain.Interaction, error)
+	Set(ctx context.Context, interaction domain.Interaction) error
+}
+
+func (cache *interactionCache) Get(ctx context.Context, biz string, bizID int64) (domain.Interaction, error) {
+	data, err := cache.cmd.Get(ctx, cache.key(biz, bizID)).Bytes()
+	if err != nil {
+		return domain.Interaction{}, err
+	}
+	var inter domain.Interaction
+	err = json.Unmarshal(data, &inter)
+	return inter, err
+}
+
+func (cache *interactionCache) Set(ctx context.Context, interaction domain.Interaction) error {
+	data, err := json.Marshal(interaction)
+	if err != nil {
+		return err
+	}
+	return cache.cmd.Set(ctx, cache.key(interaction.Biz, interaction.BizID), data, time.Minute*5).Err()
 }
 
 type interactionCache struct {

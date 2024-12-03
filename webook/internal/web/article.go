@@ -225,11 +225,16 @@ func (handler *ArticleHandler) PubDetail(c *gin.Context) {
 		return
 	}
 
+	// 查询文章的点赞数、收藏数和观看书
+	// 查询用户是否点赞、收藏
+
 	// 增加阅读数
-	err = handler.interSvc.View(c, art.ID)
-	if err != nil {
-		// 只能记录日志，上传告警信息
-	}
+	go func() {
+		err := handler.interSvc.View(c, art.ID)
+		if err != nil {
+			// 只能记录日志，上传告警信息
+		}
+	}()
 
 	c.JSON(200, ginx.Result{
 		Msg:  "ok",
@@ -290,7 +295,7 @@ func (handler *ArticleHandler) RegisterRoutes(server *gin.Engine) {
 	// 点赞接口
 	g.POST("/like", ginx.WrapBodyAndClaims[LikeReq, *UserClaims](handler.Like))
 
-	//g.POST("/favorite", ginx.)
+	g.POST("/favorite", ginx.WrapBodyAndClaims[FavoriteReq, *UserClaims](handler.Favorite))
 }
 
 /*
@@ -366,5 +371,6 @@ interactionService
 	Liked
 	collected
 
+	Get(): 获取文章的点赞数、收藏数、阅读数
 
 */

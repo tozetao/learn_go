@@ -64,9 +64,25 @@ type InteractionDao interface {
 	InsertLikeInfo(ctx context.Context, uid int64, biz string, bizID int64) error
 	DeleteLikeInfo(ctx context.Context, uid int64, biz string, bizID int64) error
 	InsertFavorite(ctx context.Context, favorite UserFavorite) error
+	Get(ctx context.Context, biz string, bizID int64) (Interaction, error)
+	GetUserLikeInfo(ctx context.Context, uid int64, biz string, bizID int64) (UserLike, error)
 }
 
-func (dao interactionDao) InsertFavorite(ctx context.Context, favorite UserFavorite) error {
+func (dao *interactionDao) GetUserLikeInfo(ctx context.Context, uid int64, biz string, bizID int64) (UserLike, error) {
+	var userLike UserLike
+	err := dao.db.WithContext(ctx).Model(&Interaction{}).
+		Where("uid = ? and biz = ? and biz_id = ?", uid, biz, bizID).First(&userLike).Error
+	return userLike, err
+}
+
+func (dao *interactionDao) Get(ctx context.Context, biz string, bizID int64) (Interaction, error) {
+	var inter Interaction
+	err := dao.db.WithContext(ctx).Model(&Interaction{}).
+		Where("biz = ? and biz_id = ?", biz, bizID).First(&inter).Error
+	return inter, err
+}
+
+func (dao *interactionDao) InsertFavorite(ctx context.Context, favorite UserFavorite) error {
 	// 暂时不考虑分享数的正确性
 	now := time.Now().UnixMilli()
 	return dao.db.Transaction(func(tx *gorm.DB) error {
@@ -92,7 +108,7 @@ func (dao interactionDao) InsertFavorite(ctx context.Context, favorite UserFavor
 	})
 }
 
-func (dao interactionDao) IncrReadCnt(ctx context.Context, biz string, bizID int64) error {
+func (dao *interactionDao) IncrReadCnt(ctx context.Context, biz string, bizID int64) error {
 	now := time.Now().UnixMilli()
 
 	inter := Interaction{
@@ -112,7 +128,7 @@ func (dao interactionDao) IncrReadCnt(ctx context.Context, biz string, bizID int
 }
 
 // InsertLikeInfo 插入点赞记录
-func (dao interactionDao) InsertLikeInfo(ctx context.Context, uid int64, biz string, bizID int64) error {
+func (dao *interactionDao) InsertLikeInfo(ctx context.Context, uid int64, biz string, bizID int64) error {
 	/*
 		目前这种实现，没有判定玩家是否点赞成功，因此只要用户不停的取消并再次点赞，点赞数就会一直增加。
 		解决方案：
@@ -158,7 +174,7 @@ func (dao interactionDao) InsertLikeInfo(ctx context.Context, uid int64, biz str
 	}).Error
 }
 
-func (dao interactionDao) DeleteLikeInfo(ctx context.Context, uid int64, biz string, bizID int64) error {
+func (dao *interactionDao) DeleteLikeInfo(ctx context.Context, uid int64, biz string, bizID int64) error {
 	now := time.Now().UnixMilli()
 
 	return dao.db.Transaction(func(tx *gorm.DB) error {

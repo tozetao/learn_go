@@ -5,6 +5,7 @@ import (
 	"learn_go/webook/internal/domain"
 	"learn_go/webook/internal/repository/cache"
 	"learn_go/webook/internal/repository/dao"
+	"time"
 )
 
 type InteractionRepository interface {
@@ -15,6 +16,44 @@ type InteractionRepository interface {
 	// DecrLike 移除点赞信息
 	DecrLike(ctx context.Context, uid int64, biz string, bizID int64) error
 	AddFavorite(ctx context.Context, uid int64, favoriteID int64, biz string, bizID int64) error
+	Get(ctx context.Context, biz string, bizID int64) (domain.Interaction, error)
+
+	GetUserLikeInfo(ctx context.Context, uid int64, biz string, bizID int64) (domain.UserLike, error)
+}
+
+func (repo *interactionRepository) GetUserLikeInfo(ctx context.Context, uid int64, biz string, bizID int64) (domain.UserLike, error) {
+	userLike, err := repo.dao.GetUserLikeInfo(ctx, uid, biz, bizID)
+	if err != nil {
+		return domain.UserLike{}, err
+	}
+	return domain.UserLike{
+		ID:    userLike.ID,
+		Biz:   userLike.Biz,
+		Uid:   userLike.Uid,
+		BizID: userLike.BizID,
+		CTime: time.UnixMilli(userLike.CTime),
+		UTime: time.UnixMilli(userLike.UTime),
+	}, nil
+}
+
+func (repo *interactionRepository) Get(ctx context.Context, biz string, bizID int64) (domain.Interaction, error) {
+	inter, err := repo.cache.Get(ctx, biz, bizID)
+	if err == nil {
+		return inter, nil
+	}
+
+	interEntity, err := repo.dao.Get(ctx, biz, bizID)
+	if err != nil {
+		return inter, err
+	}
+	inter = repo.toDomain(interEntity)
+
+	// 存储到缓存中
+	err = repo.cache.Set(ctx, inter)
+	if err != nil {
+		// 记录日志，告警。
+	}
+	return inter, nil
 }
 
 func (repo *interactionRepository) AddFavorite(ctx context.Context, uid int64, favoriteID int64, biz string, bizID int64) error {
@@ -98,5 +137,20 @@ func (repo *interactionRepository) toEntity(inter domain.Interaction) dao.Intera
 
 		CTime: inter.CTime.UnixMilli(),
 		UTime: inter.UTime.UnixMilli(),
+	}
+}
+
+func (repo *interactionRepository) toDomain(entity dao.Interaction) domain.Interaction {
+	return domain.Interaction{
+		ID:    entity.ID,
+		Biz:   entity.Biz,
+		BizID: entity.ID,
+
+		Favorites: entity.Favorites,
+		Views:     entity.ReadCnt,
+		Likes:     entity.Likes,
+
+		CTime: time.UnixMilli(entity.CTime),
+		UTime: time.UnixMilli(entity.UTime),
 	}
 }
