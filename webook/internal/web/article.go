@@ -356,7 +356,6 @@ Interaction
 
 收藏接口的实现
 
-
 文章的交互数据的获取
 	交互数据的获取可以有俩种方式：
 	1. 将Interaction领域对象作为Article领域对象的值对象，从概念上来说，这些交互数据的获取要在Article Repository层面上来解决问题。
