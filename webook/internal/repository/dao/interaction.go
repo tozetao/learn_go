@@ -66,11 +66,20 @@ type InteractionDao interface {
 	InsertFavorite(ctx context.Context, favorite UserFavorite) error
 	Get(ctx context.Context, biz string, bizID int64) (Interaction, error)
 	GetUserLikeInfo(ctx context.Context, uid int64, biz string, bizID int64) (UserLike, error)
+	GetUserFavoriteInfo(ctx context.Context, uid int64, biz string, id int64) (UserFavorite, error)
+}
+
+func (dao *interactionDao) GetUserFavoriteInfo(ctx context.Context, uid int64, biz string, bizID int64) (UserFavorite, error) {
+	var userFavorite UserFavorite
+	err := dao.db.WithContext(ctx).Model(&UserFavorite{}).
+		Where("uid = ? and biz = ? and biz_id = ?", uid, biz, bizID).
+		First(&userFavorite).Error
+	return userFavorite, err
 }
 
 func (dao *interactionDao) GetUserLikeInfo(ctx context.Context, uid int64, biz string, bizID int64) (UserLike, error) {
 	var userLike UserLike
-	err := dao.db.WithContext(ctx).Model(&Interaction{}).
+	err := dao.db.WithContext(ctx).Model(&UserLike{}).
 		Where("uid = ? and biz = ? and biz_id = ?", uid, biz, bizID).First(&userLike).Error
 	return userLike, err
 }
