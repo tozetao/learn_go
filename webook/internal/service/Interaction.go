@@ -13,22 +13,22 @@ type InteractionService interface {
 	CancelLike(ctx context.Context, uid int64, articleID int64) error
 	Favorite(ctx context.Context, uid int64, favoriteID int64, articleID int64) error
 
-	Get(ctx context.Context, biz string, bizID int64) (domain.Interaction, error)
+	Get(ctx context.Context, articleID int64) (domain.Interaction, error)
 
-	Liked(ctx context.Context, uid int64, biz string, bizID int64) bool
-	Collected(ctx context.Context, uid int64, biz string, bizID int64) bool
+	Liked(ctx context.Context, uid int64, articleID int64) bool
+	Collected(ctx context.Context, uid int64, articleID int64) bool
 }
 
-func (svc *interactionService) Liked(ctx context.Context, uid int64, biz string, bizID int64) bool {
-	userLike, err := svc.repo.GetUserLikeInfo(ctx, uid, biz, bizID)
+func (svc *interactionService) Liked(ctx context.Context, uid int64, articleID int64) bool {
+	userLike, err := svc.repo.GetUserLikeInfo(ctx, uid, svc.biz, articleID)
 	if err != nil {
 		// 记录日志，报警。当然错误可能是ErrRecordNotFound。我们整个项目中，repository找不到记录都是以错误返回的。
 		return false
 	}
-	return userLike.Uid == uid && userLike.BizID == bizID
+	return userLike.Uid == uid && userLike.BizID == articleID
 }
 
-func (svc *interactionService) Collected(ctx context.Context, uid int64, biz string, bizID int64) bool {
+func (svc *interactionService) Collected(ctx context.Context, uid int64, articleID int64) bool {
 	// TODO: implement me
 	return false
 }
@@ -49,8 +49,8 @@ func NewInteractionService(repo repository.InteractionRepository) InteractionSer
 	}
 }
 
-func (svc *interactionService) Get(ctx context.Context, biz string, bizID int64) (domain.Interaction, error) {
-	return svc.repo.Get(ctx, biz, bizID)
+func (svc *interactionService) Get(ctx context.Context, articleID int64) (domain.Interaction, error) {
+	return svc.repo.Get(ctx, svc.biz, articleID)
 }
 
 func (svc *interactionService) Like(ctx context.Context, uid int64, articleID int64) error {

@@ -11,6 +11,14 @@ type ArticleVO struct {
 	Content string `json:"content"`
 	CTime   string `json:"c_time"`
 	UTime   string `json:"u_time"`
+
+	Likes     int64 `json:"likes"`
+	Favorites int64 `json:"favorites"`
+	Views     int64 `json:"views"`
+
+	// 用户是否点赞
+	Liked     int8 `json:"liked"`
+	Collected int8 `json:"collected"`
 }
 
 type FavoriteReq struct {

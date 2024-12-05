@@ -58,6 +58,30 @@ type Article struct {
 	Utime int64 `json:"u_time" gorm:"column:u_time"  bson:"u_time,omitempty"`
 }
 
-//func InitTable(db *gorm.DB) error {
-//	return db.AutoMigrate(&dao.User{}, &Article{}, &PublishArticle{})
-//}
+type Foo struct {
+	Name string
+	Age  int
+}
+
+func (f Foo) Display() {
+	fmt.Printf("name: %s, age: %d\n", f.Name, f.Age)
+}
+
+func (f Foo) Change() {
+	f.Name = "change name"
+	f.Age = 100
+}
+
+func TestReceive(t *testing.T) {
+	foo := Foo{
+		Name: "zhangsan",
+		Age:  25,
+	}
+	foo.Display()
+
+	foo.Name = "lisi"
+	foo.Display()
+
+	foo.Change()
+	foo.Display()
+}

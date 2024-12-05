@@ -219,14 +219,35 @@ func (handler *ArticleHandler) PubDetail(c *gin.Context) {
 		c.JSON(200, ginx.Result{Code: 5, Msg: "params error"})
 		return
 	}
+
+	userClaims, ok := c.MustGet("user").(*UserClaims)
+	if !ok {
+		c.JSON(200, ginx.Result{Code: 5, Msg: "auth error"})
+		return
+	}
+
 	art, err := handler.svc.GetPubArticle(c, articleID)
 	if err != nil {
 		c.JSON(200, ginx.Result{Code: 5, Msg: "internal server error."})
 		return
 	}
+	vo := handler.ToVO(art)
 
 	// 查询文章的点赞数、收藏数和观看书
-	// 查询用户是否点赞、收藏
+	inter, err := handler.interSvc.Get(c, articleID)
+	if err != nil {
+		// 记录错误
+	} else {
+		// 查询用户是否点赞、收藏
+		vo.Views = inter.Views
+		vo.Favorites = inter.Favorites
+		vo.Likes = inter.Likes
+	}
+	if handler.interSvc.Liked(c, userClaims.Uid, articleID) {
+		vo.Liked = ArticleLike
+	} else {
+		vo.Liked = ArticleUnlike
+	}
 
 	// 增加阅读数
 	go func() {
@@ -238,7 +259,7 @@ func (handler *ArticleHandler) PubDetail(c *gin.Context) {
 
 	c.JSON(200, ginx.Result{
 		Msg:  "ok",
-		Data: handler.ToVO(art),
+		Data: vo,
 	})
 }
 
