@@ -17,6 +17,8 @@ type ArticleHandler struct {
 	log      logger.LoggerV2
 	svc      service.ArticleService
 	interSvc service.InteractionService
+
+	biz string
 }
 
 func NewArticleHandler(svc service.ArticleService, interSvc service.InteractionService, l logger.LoggerV2) *ArticleHandler {
@@ -24,6 +26,7 @@ func NewArticleHandler(svc service.ArticleService, interSvc service.InteractionS
 		log:      l,
 		svc:      svc,
 		interSvc: interSvc,
+		biz:      "article",
 	}
 }
 
@@ -251,7 +254,7 @@ func (handler *ArticleHandler) PubDetail(c *gin.Context) {
 
 	// 增加阅读数
 	go func() {
-		err := handler.interSvc.View(c, art.ID)
+		err := handler.interSvc.View(c, handler.biz, art.ID)
 		if err != nil {
 			// 只能记录日志，上传告警信息
 		}
@@ -266,9 +269,9 @@ func (handler *ArticleHandler) PubDetail(c *gin.Context) {
 func (handler *ArticleHandler) Like(c *gin.Context, req LikeReq, userClaims *UserClaims) (ginx.Result, error) {
 	var err error
 	if req.Action == ArticleLike {
-		err = handler.interSvc.Like(c, userClaims.Uid, req.ArticleID)
+		err = handler.interSvc.Like(c, userClaims.Uid, handler.biz, req.ArticleID)
 	} else {
-		err = handler.interSvc.CancelLike(c, userClaims.Uid, req.ArticleID)
+		err = handler.interSvc.CancelLike(c, userClaims.Uid, handler.biz, req.ArticleID)
 	}
 	if err != nil {
 		return ginx.Result{
@@ -282,7 +285,7 @@ func (handler *ArticleHandler) Like(c *gin.Context, req LikeReq, userClaims *Use
 }
 
 func (handler *ArticleHandler) Favorite(ctx *gin.Context, req FavoriteReq, userClaims *UserClaims) (ginx.Result, error) {
-	err := handler.interSvc.Favorite(ctx, userClaims.Uid, req.FavoriteID, req.ArticleID)
+	err := handler.interSvc.Favorite(ctx, userClaims.Uid, req.FavoriteID, handler.biz, req.ArticleID)
 	if err != nil {
 		return ginx.Result{Code: 5, Msg: "save error"}, errors.New("failed")
 	}
@@ -393,5 +396,7 @@ interactionService
 	collected
 
 	Get(): 获取文章的点赞数、收藏数、阅读数
+	为Interaction领域添加是否点赞、是否收藏属性。那么从语义上来说，应该Repository层面上获取这俩个属性的值。
+
 
 */

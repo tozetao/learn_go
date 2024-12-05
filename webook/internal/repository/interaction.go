@@ -2,6 +2,7 @@ package repository
 
 import (
 	"context"
+	"golang.org/x/sync/errgroup"
 	"learn_go/webook/internal/domain"
 	"learn_go/webook/internal/repository/cache"
 	"learn_go/webook/internal/repository/dao"
@@ -15,10 +16,13 @@ type InteractionRepository interface {
 	IncrLike(ctx context.Context, uid int64, biz string, bizID int64) error
 	// DecrLike 移除点赞信息
 	DecrLike(ctx context.Context, uid int64, biz string, bizID int64) error
-	AddFavorite(ctx context.Context, uid int64, favoriteID int64, biz string, bizID int64) error
-	Get(ctx context.Context, biz string, bizID int64) (domain.Interaction, error)
+	AddFavoriteItem(ctx context.Context, uid int64, favoriteID int64, biz string, bizID int64) error
+	Get(ctx context.Context, uid int64, biz string, bizID int64) (domain.Interaction, error)
 
+	// GetUserLikeInfo 获取用户的某个资源的点赞信息
 	GetUserLikeInfo(ctx context.Context, uid int64, biz string, bizID int64) (domain.UserLike, error)
+	// GetUserFavoriteInfo 获取用户的某个资源的收藏信息
+	GetUserFavoriteInfo(ctx context.Context, uid int64, biz string, bizID int64) (domain.UserFavorite, error)
 }
 
 func (repo *interactionRepository) GetUserLikeInfo(ctx context.Context, uid int64, biz string, bizID int64) (domain.UserLike, error) {
@@ -36,10 +40,27 @@ func (repo *interactionRepository) GetUserLikeInfo(ctx context.Context, uid int6
 	}, nil
 }
 
-func (repo *interactionRepository) Get(ctx context.Context, biz string, bizID int64) (domain.Interaction, error) {
+func (repo *interactionRepository) GetUserFavoriteInfo(ctx context.Context, uid int64, biz string, bizID int64) (domain.UserFavorite, error) {
+	entity, err := repo.dao.GetUserFavoriteInfo(ctx, uid, biz, bizID)
+	if err != nil {
+		return domain.UserFavorite{}, err
+	}
+	return domain.UserFavorite{
+		ID:         entity.ID,
+		Uid:        entity.Uid,
+		Biz:        entity.Biz,
+		BizID:      entity.BizID,
+		FavoriteID: entity.FavoriteID,
+		CTime:      time.UnixMilli(entity.CTime),
+		UTime:      time.UnixMilli(entity.UTime),
+	}, nil
+}
+
+func (repo *interactionRepository) Get(ctx context.Context, uid int64, biz string, bizID int64) (domain.Interaction, error) {
+	// 因为是否点赞、是否收藏这俩个属性加入到Interaction领域对象中，所以从语义上应该从repository中来完成该对象的完整构造。
 	inter, err := repo.cache.Get(ctx, biz, bizID)
 	if err == nil {
-		return inter, nil
+		return repo.appendLikedAndCollected(ctx, inter, uid, biz, bizID), nil
 	}
 
 	interEntity, err := repo.dao.Get(ctx, biz, bizID)
@@ -48,15 +69,44 @@ func (repo *interactionRepository) Get(ctx context.Context, biz string, bizID in
 	}
 	inter = repo.toDomain(interEntity)
 
-	// 存储到缓存中
-	err = repo.cache.Set(ctx, inter)
-	if err != nil {
-		// 记录日志，告警。
-	}
-	return inter, nil
+	go func() {
+		err := repo.cache.Set(ctx, biz, bizID, inter)
+		if err != nil {
+			// 记录日志，告警。
+		}
+	}()
+
+	return repo.appendLikedAndCollected(ctx, inter, uid, biz, bizID), nil
 }
 
-func (repo *interactionRepository) AddFavorite(ctx context.Context, uid int64, favoriteID int64, biz string, bizID int64) error {
+func (repo *interactionRepository) appendLikedAndCollected(ctx context.Context,
+	inter domain.Interaction, uid int64, biz string, bizID int64) domain.Interaction {
+	var eg errgroup.Group
+	eg.Go(func() error {
+		userLike, err := repo.GetUserLikeInfo(ctx, uid, biz, bizID)
+		if err != nil {
+			// 可以考虑在这里记录日志
+			inter.Liked = false
+		} else {
+			inter.Liked = userLike.Liked()
+		}
+		return nil
+	})
+	eg.Go(func() error {
+		userFavorite, err := repo.GetUserFavoriteInfo(ctx, uid, biz, bizID)
+		if err != nil {
+			// 可以考虑在这里记录日志
+			inter.Collected = false
+		} else {
+			inter.Collected = userFavorite.Collected()
+		}
+		return nil
+	})
+	_ = eg.Wait()
+	return inter
+}
+
+func (repo *interactionRepository) AddFavoriteItem(ctx context.Context, uid int64, favoriteID int64, biz string, bizID int64) error {
 	err := repo.dao.InsertFavorite(ctx, dao.UserFavorite{
 		Uid:        uid,
 		FavoriteID: favoriteID,
