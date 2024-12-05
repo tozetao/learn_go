@@ -17,8 +17,8 @@ type ArticleVO struct {
 	Views     int64 `json:"views"`
 
 	// 用户是否点赞
-	Liked     int8 `json:"liked"`
-	Collected int8 `json:"collected"`
+	Liked     bool `json:"liked"`
+	Collected bool `json:"collected"`
 }
 
 type FavoriteReq struct {

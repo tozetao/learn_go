@@ -237,7 +237,7 @@ func (handler *ArticleHandler) PubDetail(c *gin.Context) {
 	vo := handler.ToVO(art)
 
 	// 查询文章的点赞数、收藏数和观看书
-	inter, err := handler.interSvc.Get(c, articleID)
+	inter, err := handler.interSvc.Get(c, userClaims.Uid, handler.biz, articleID)
 	if err != nil {
 		// 记录错误
 	} else {
@@ -245,12 +245,15 @@ func (handler *ArticleHandler) PubDetail(c *gin.Context) {
 		vo.Views = inter.Views
 		vo.Favorites = inter.Favorites
 		vo.Likes = inter.Likes
+		vo.Liked = inter.Liked
+		vo.Collected = inter.Collected
 	}
-	if handler.interSvc.Liked(c, userClaims.Uid, articleID) {
-		vo.Liked = ArticleLike
-	} else {
-		vo.Liked = ArticleUnlike
-	}
+	//ok, _ = handler.interSvc.Liked(c, userClaims.Uid, handler.biz, articleID)
+	//if !ok {
+	//	vo.Liked = ArticleLike
+	//} else {
+	//	vo.Liked = ArticleUnlike
+	//}
 
 	// 增加阅读数
 	go func() {
