@@ -123,7 +123,66 @@ acks：有三个取值。
 
 从上到下性能主键变差，但是数据可靠性逐渐上升。需要性能选0，需要可靠性选-1。
 
-![](./1733472664955.jpg)
+![](./isr.jpg)
 
 ISR（In Sync Replicas），保持了同步的副本。通俗易懂的解释就是跟上节奏的从分区，就是说从分区跟主分区保持数据同步。所以当消息被同步到从分区之后，如果主分区奔溃了，依旧能保证在从分区上还有数据。
+
+
+
+
+
+
+
+**kafka的偏移量**
+
+从目前的测试中，消费者再消费消息时，是以最后一次提交的消息的坐标（offset）为准，即获取坐标offset+1的消息。
+
+
+
+
+
+
+
+
+
+问题
+
+- 前面的消息消费失败不提交标记，但是后面消费的消息成功？下次是否还会读取到消费失败的消息？
+- kafka如何设置数据保存的时间？
+- 测试kafka分片消费消息的顺序，有3个分区，
+
+- sarama的消费者会创建多少个消费者?
+- sarama的偏移量设置，最新和最旧有什么区别?
+
+- 如果多个goroutine返回错误，那么errGroup.Wait()究竟返回的是哪个错误？
+
+
+
+```
+// 如果之前没有提交偏移，则使用的初始偏移。
+// The initial offset to use if no offset was previously committed.
+cfg.Consumer.Offsets.Initial
+该配置有什么用?
+
+OffsetNewest
+OffsetOldest
+这俩个常量有什么区别?
+```
+
+
+
+kafka-topics.sh --bootstrap-server=127.0.0.1:9092 --topic=my_topic --describe
+kafka-console-consumer.sh --bootstrap-server=127.0.0.1:9092 --topic=my_topic
+
+
+
+
+
+
+
+
+
+
+
+
 
