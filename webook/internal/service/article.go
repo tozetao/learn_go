@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"learn_go/webook/internal/domain"
+	event "learn_go/webook/internal/event/article"
 	"learn_go/webook/internal/repository/article"
 	"learn_go/webook/pkg/logger"
 	"time"
@@ -53,7 +54,7 @@ type ArticleService interface {
 	GetByID(ctx context.Context, id int64) (domain.Article, error)
 
 	ListPub(c context.Context, time time.Time, offset int, limit int) ([]domain.Article, error)
-	GetPubArticle(ctx context.Context, id int64) (domain.Article, error)
+	GetPubArticle(ctx context.Context, uid, id int64) (domain.Article, error)
 }
 
 type articleService struct {
@@ -64,6 +65,7 @@ type articleService struct {
 	// 与ArticleRepository互斥
 	articleAuthorRepo article.AuthorRepository
 	articleReaderRepo article.ReaderRepository
+	producer          event.Producer
 }
 
 func (svc *articleService) ListPub(ctx context.Context, t time.Time, offset int, limit int) ([]domain.Article, error) {
@@ -78,8 +80,18 @@ func (svc *articleService) GetByID(ctx context.Context, articleID int64) (domain
 	return svc.articleRepo.GetByID(ctx, articleID)
 }
 
-func (svc *articleService) GetPubArticle(ctx context.Context, articleID int64) (domain.Article, error) {
-	return svc.articleRepo.GetPubByID(ctx, articleID)
+func (svc *articleService) GetPubArticle(ctx context.Context, uid, articleID int64) (domain.Article, error) {
+	art, err := svc.articleRepo.GetPubByID(ctx, articleID)
+	go func() {
+		err := svc.producer.ProduceReadEvent(event.ReadEvent{
+			Uid:       uid,
+			ArticleID: articleID,
+		})
+		if err != nil {
+			// 记录日志
+		}
+	}()
+	return art, err
 }
 
 func (svc *articleService) Withdraw(ctx context.Context, article domain.Article) error {
@@ -135,8 +147,10 @@ func NewArticleService(
 	articleRepo article.ArticleRepository,
 	articleAuthorRepo article.AuthorRepository,
 	articleReaderRepo article.ReaderRepository,
+	producer event.Producer,
 	log logger.LoggerV2) ArticleService {
 	return &articleService{
+		producer:          producer,
 		log:               log,
 		articleRepo:       articleRepo,
 		articleAuthorRepo: articleAuthorRepo,

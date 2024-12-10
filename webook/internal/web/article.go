@@ -229,7 +229,7 @@ func (handler *ArticleHandler) PubDetail(c *gin.Context) {
 		return
 	}
 
-	art, err := handler.svc.GetPubArticle(c, articleID)
+	art, err := handler.svc.GetPubArticle(c, userClaims.Uid, articleID)
 	if err != nil {
 		c.JSON(200, ginx.Result{Code: 5, Msg: "internal server error."})
 		return
@@ -255,13 +255,13 @@ func (handler *ArticleHandler) PubDetail(c *gin.Context) {
 	//	vo.Liked = ArticleUnlike
 	//}
 
-	// 增加阅读数
-	go func() {
-		err := handler.interSvc.View(c, handler.biz, art.ID)
-		if err != nil {
-			// 只能记录日志，上传告警信息
-		}
-	}()
+	//// 增加阅读数
+	//go func() {
+	//	err := handler.interSvc.View(c, handler.biz, art.ID)
+	//	if err != nil {
+	//		// 只能记录日志，上传告警信息
+	//	}
+	//}()
 
 	c.JSON(200, ginx.Result{
 		Msg:  "ok",

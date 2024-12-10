@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"learn_go/webook/internal/domain"
+	event "learn_go/webook/internal/event/article"
 	"learn_go/webook/internal/repository"
 )
 
@@ -44,7 +45,8 @@ func (svc *interactionService) Favorite(ctx context.Context, uid int64, favorite
 }
 
 type interactionService struct {
-	repo repository.InteractionRepository
+	repo     repository.InteractionRepository
+	producer event.Producer
 }
 
 func (svc *interactionService) Get(ctx context.Context, uid int64, biz string, bizID int64) (domain.Interaction, error) {

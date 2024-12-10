@@ -12,9 +12,10 @@ type ReadEvent struct {
 
 const TopicReadEvent = "article_read"
 
+// Producer 产生各种事件（事件即消息）
 type Producer interface {
-	// 产生一个用户读取文章的事件
-	produceReadEvent(event ReadEvent) error
+	// ProduceReadEvent 产生一个用户读取文章的事件
+	ProduceReadEvent(event ReadEvent) error
 }
 
 type SaramaSyncProducer struct {
@@ -27,7 +28,7 @@ func NewSyncProducer(syncProducer sarama.SyncProducer) Producer {
 	}
 }
 
-func (p *SaramaSyncProducer) produceReadEvent(event ReadEvent) error {
+func (p *SaramaSyncProducer) ProduceReadEvent(event ReadEvent) error {
 	// 把这个事件作为消息投递到kafka中。
 	data, err := json.Marshal(event)
 	if err != nil {
