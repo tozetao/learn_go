@@ -133,46 +133,117 @@ ISR（In Sync Replicas），保持了同步的副本。通俗易懂的解释就�
 
 
 
-**kafka的偏移量**
+### 消息的偏移量
 
-从目前的测试中，消费者再消费消息时，是以最后一次提交的消息的坐标（offset）为准，即获取坐标offset+1的消息。
+偏移量（offset）的作用？
 
-
-
-
+消息的读取是一直向后读取的，不管消息有没有被标记。我认为标记一个消息就是通过offset标记当前已经消费到哪个消息了。这样在消费者程序下次启动时就会从该offset+1起读取消息。
 
 
 
+从目前的测试中，使用sarama的默认配置，每次启动消费者时，总是从最后一次提交消息的offset为准去读取消息。就是说从最后一条提交的消息的offset再加1作为起始下标来读取消息。
+
+测试代码：
+
+```go
+// 生产者的实现
+func TestSyncProducer(t *testing.T) {
+	config := sarama.NewConfig()
+	config.Producer.RequiredAcks = sarama.WaitForAll
+	config.Producer.Return.Successes = true
+	config.Producer.Return.Errors = true
+
+	producer, err := sarama.NewSyncProducer(addr, config)
+	config.Producer.Partitioner = sarama.NewRoundRobinPartitioner
+	require.NoError(t, err)
+
+	defer func() {
+		if err := producer.Close(); err != nil {
+			t.Logf("producer close error, %v", err)
+		}
+	}()
+
+	for i := 0; i < 3; i++ {
+		partition, offset, err := producer.SendMessage(&sarama.ProducerMessage{
+			Topic: "my_topic",
+			Value: sarama.StringEncoder("hello."),
+		})
+		assert.NoError(t, err)
+		t.Logf("partition = %d, offset = %d", partition, offset)
+	}
+
+}
+
+// sarama消费消息的实现
+func (c *ConsumerHandler) ConsumeClaim(session sarama.ConsumerGroupSession, claim sarama.ConsumerGroupClaim) error {
+	c.t.Logf("topic: %s, partition: %d", claim.Topic(), claim.Partition())
+	msgs := claim.Messages()
+	for msg := range msgs {
+		c.t.Logf("message: %s, topic: %s, partition: %d, offset: %d", string(msg.Value), msg.Topic, msg.Partition, msg.Offset)
+		c.t.Log(msg.Offset % 2)
+		if msg.Offset%2 == 0 {
+			session.MarkMessage(msg, "")
+		}
+	}
+	return nil
+}
+
+/*
+生产者发送offset为1、2、3的3条消息。
+多次启动消费者代码，可以发现总是会从offset=3读取消息。
+
+生产者发送offset为4、5、6的3条消息。
+多次启动消费者代码，可以发现总是会从offset=6+1读取消息，这是读取不到新的消息。
+
+总结：
+如果有一条消息消费了但是没有提交，你在每次启动消费者程序时总是会读取到这条消息，直到你提交该条消息或者是提交下一条消息。记住总是以最条一条提交消息的offset+1作为下标来读取消息的。
+
+消费一批消息也是一样的，如果一批消息其中有些消息未提交标记，但是只要提交消息的offset大于这些未提交消息的offset，在下次重启消费者程序时是不会读取到这些未提交标记的消息的。
+*/
+```
 
 
-问题
 
-- 前面的消息消费失败不提交标记，但是后面消费的消息成功？下次是否还会读取到消费失败的消息？
+
+
+shell
+
+```
+kafka-topics.sh --bootstrap-server=127.0.0.1:9092 --topic=my_topic --describe
+kafka-console-consumer.sh --bootstrap-server=127.0.0.1:9092 --topic=my_topic
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+### 问题
+
 - kafka如何设置数据保存的时间？
-- 测试kafka分片消费消息的顺序，有3个分区，
 
-- sarama的消费者会创建多少个消费者?
+- 测试kafka分片消费消息的顺序
+
 - sarama的偏移量设置，最新和最旧有什么区别?
+
+  OffsetNewest、OffsetOldest
 
 - 如果多个goroutine返回错误，那么errGroup.Wait()究竟返回的是哪个错误？
 
 
 
-```
-// 如果之前没有提交偏移，则使用的初始偏移。
-// The initial offset to use if no offset was previously committed.
-cfg.Consumer.Offsets.Initial
-该配置有什么用?
-
-OffsetNewest
-OffsetOldest
-这俩个常量有什么区别?
-```
 
 
 
-kafka-topics.sh --bootstrap-server=127.0.0.1:9092 --topic=my_topic --describe
-kafka-console-consumer.sh --bootstrap-server=127.0.0.1:9092 --topic=my_topic
+
+
 
 
 

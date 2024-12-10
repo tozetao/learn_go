@@ -53,6 +53,23 @@ func (c *ConsumerHandler) ConsumeClaim(session sarama.ConsumerGroupSession, clai
 	msgs := claim.Messages()
 	for msg := range msgs {
 		c.t.Logf("message: %s, topic: %s, partition: %d, offset: %d", string(msg.Value), msg.Topic, msg.Partition, msg.Offset)
+
+		if msg.Offset%2 == 0 {
+			// 忽略offset为偶数的消息
+			c.t.Log("ignore the message.")
+			continue
+		} else {
+			session.MarkMessage(msg, "")
+		}
+	}
+	return nil
+}
+
+func (c *ConsumerHandler) ConsumeClaimV1(session sarama.ConsumerGroupSession, claim sarama.ConsumerGroupClaim) error {
+	c.t.Logf("topic: %s, partition: %d", claim.Topic(), claim.Partition())
+	msgs := claim.Messages()
+	for msg := range msgs {
+		c.t.Logf("message: %s, topic: %s, partition: %d, offset: %d", string(msg.Value), msg.Topic, msg.Partition, msg.Offset)
 		c.t.Log(msg.Offset % 2)
 		if msg.Offset%2 == 0 {
 			session.MarkMessage(msg, "")
