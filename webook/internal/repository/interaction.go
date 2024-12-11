@@ -2,6 +2,7 @@ package repository
 
 import (
 	"context"
+	"errors"
 	"golang.org/x/sync/errgroup"
 	"learn_go/webook/internal/domain"
 	"learn_go/webook/internal/repository/cache"
@@ -11,6 +12,8 @@ import (
 
 type InteractionRepository interface {
 	IncrReadCnt(ctx context.Context, biz string, bizID int64) error
+
+	BatchIncrReadCnt(ctx context.Context, bizs []string, bizIDs []int64) error
 
 	// IncrLike 创建点赞信息
 	IncrLike(ctx context.Context, uid int64, biz string, bizID int64) error
@@ -127,6 +130,28 @@ func (repo *interactionRepository) AddFavoriteItem(ctx context.Context, uid int6
 type interactionRepository struct {
 	dao   dao.InteractionDao
 	cache cache.InteractionCache
+}
+
+func (repo *interactionRepository) BatchIncrReadCnt(ctx context.Context, bizs []string, bizIDs []int64) error {
+	if len(bizIDs) != len(bizIDs) {
+		return errors.New("the length of a and b must be equal")
+	}
+	// 1. 调用dao的批量增加
+	err := repo.dao.BatchIncrReadCnt(ctx, bizs, bizIDs)
+	if err != nil {
+		return err
+	}
+
+	// 2. 批量增加缓存
+	go func() {
+		for i := range bizIDs {
+			err := repo.cache.IncrReadCnt(ctx, bizs[i], bizIDs[i])
+			if err != nil {
+				// 记录日志
+			}
+		}
+	}()
+	return nil
 }
 
 func NewInteractionRepository(dao dao.InteractionDao, cache cache.InteractionCache) InteractionRepository {

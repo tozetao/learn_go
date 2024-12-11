@@ -4,8 +4,8 @@
 package main
 
 import (
-	"github.com/gin-gonic/gin"
 	"github.com/google/wire"
+	event "learn_go/webook/internal/event/article"
 	"learn_go/webook/internal/repository"
 	"learn_go/webook/internal/repository/article"
 	"learn_go/webook/internal/repository/cache"
@@ -22,33 +22,60 @@ var (
 		ioc.NewDB,
 		ioc.NewRedis,
 
-		cache.NewCodeCache, cache.NewUserCache,
+		ioc.InitMiddlewares,
+		ioc.InitGin,
 
-		dao.NewUserDao,
+		ioc.InitSMSService,
+		ioc.InitOAuth2Service,
 
+		// 消费者
+		ioc.NewSaramaConfig,
+		ioc.NewConsumerClient,
+		//event.NewConsumer,
+		event.NewBatchReadEventConsumer,
+		ioc.NewConsumers,
+		// 生产者
+		ioc.NewSyncProducer,
+		event.NewSyncProducer,
+
+		web.NewSMSHandler,
+		web.NewUserHandler,
+		web.NewOAuth2WechatHandler,
+		web.NewJWTHandler,
+		web.NewArticleHandler,
+		web.NewTestHandler,
+
+		service.NewCodeService,
+		service.NewUserService,
+		service.NewArticleService,
+		service.NewInteractionService,
+
+		repository.NewInteractionRepository,
 		repository.NewCodeRepository,
 		repository.NewUserRepository,
 		article.NewArticleRepository,
 		article.NewArticleReaderRepository,
 		article.NewArticleAuthorRepository,
 
-		ioc.InitSMSService,
-		ioc.InitOAuth2Service,
-		service.NewCodeService,
-		service.NewUserService,
+		dao.NewUserDao,
+		dao.NewInteractionDao,
+		dao.NewArticleDao,
 
-		web.NewSMSHandler,
-		web.NewUserHandler,
-		web.NewOAuth2WechatHandler,
-		web.NewJWTHandler,
-		web.NewTestHandler,
+		cache.NewArticleCache,
+		cache.NewCodeCache,
+		cache.NewUserCache,
+		cache.NewInteractionCache,
 
-		ioc.InitMiddlewares,
-		ioc.InitGin,
+		wire.Struct(new(App), "*"),
 	)
 )
 
-func InitWebServer(templateId string) *gin.Engine {
+func InitApp(templateId string) *App {
 	wire.Build(providers)
-	return gin.Default()
+	return new(App)
 }
+
+//func InitWebServer(templateId string) *gin.Engine {
+//	wire.Build(providers)
+//	return gin.Default()
+//}

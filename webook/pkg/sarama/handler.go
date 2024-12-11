@@ -2,6 +2,7 @@ package sarama
 
 import (
 	"encoding/json"
+	"fmt"
 	"github.com/IBM/sarama"
 	"learn_go/webook/pkg/logger"
 )
@@ -31,10 +32,12 @@ func (c *Handler[T]) Cleanup(session sarama.ConsumerGroupSession) error {
 }
 
 func (c *Handler[T]) ConsumeClaim(session sarama.ConsumerGroupSession, claim sarama.ConsumerGroupClaim) error {
-	// c.l.Info(fmt.Sprintf("topic: %s, partition: %d", claim.Topic(), claim.Partition()))
+	c.l.Info(fmt.Sprintf("topic: %s, partition: %d", claim.Topic(), claim.Partition()))
+
 	messages := claim.Messages()
 	for msg := range messages {
-		// c.l.Info(fmt.Sprintf("topic: %s, partition: %d, Offset: %d", msg.Topic, msg.Partition, msg.Offset))
+		c.l.Info(fmt.Sprintf("topic: %s, partition: %d, Offset: %d", msg.Topic, msg.Partition, msg.Offset))
+
 		var data T
 		err := json.Unmarshal(msg.Value, &data)
 		// 格式解析错误，这意味着生产者投递的消息格式有问题，不需要重试。

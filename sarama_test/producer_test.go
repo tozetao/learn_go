@@ -30,10 +30,10 @@ func TestSyncProducer(t *testing.T) {
 		}
 	}()
 
-	for i := 0; i < 3; i++ {
+	for i := 0; i < 1000; i++ {
 		partition, offset, err := producer.SendMessage(&sarama.ProducerMessage{
-			Topic: "my_topic",
-			Value: sarama.StringEncoder("hello."),
+			Topic: "article_read",
+			Value: sarama.StringEncoder(`{"uid": 15, "article_id": 2001}`),
 		})
 		assert.NoError(t, err)
 		t.Logf("partition = %d, offset = %d", partition, offset)

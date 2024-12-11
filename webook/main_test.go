@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"github.com/spf13/viper"
 	"go.uber.org/zap"
 	"testing"
 )
@@ -14,6 +15,8 @@ func TestSlice(t *testing.T) {
 
 func TestViper(t *testing.T) {
 	InitConfig()
+
+	fmt.Println(viper.AllSettings())
 }
 
 func TestLog(t *testing.T) {

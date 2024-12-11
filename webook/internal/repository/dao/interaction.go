@@ -67,6 +67,7 @@ type InteractionDao interface {
 	Get(ctx context.Context, biz string, bizID int64) (Interaction, error)
 	GetUserLikeInfo(ctx context.Context, uid int64, biz string, bizID int64) (UserLike, error)
 	GetUserFavoriteInfo(ctx context.Context, uid int64, biz string, id int64) (UserFavorite, error)
+	BatchIncrReadCnt(ctx context.Context, bizs []string, ds []int64) error
 }
 
 func (dao *interactionDao) GetUserFavoriteInfo(ctx context.Context, uid int64, biz string, bizID int64) (UserFavorite, error) {
@@ -133,7 +134,7 @@ func (dao *interactionDao) IncrReadCnt(ctx context.Context, biz string, bizID in
 			"u_time":   now,
 			"read_cnt": gorm.Expr("read_cnt + ?", 1),
 		}),
-	}).Create(inter).Error
+	}).Create(&inter).Error
 }
 
 // InsertLikeInfo 插入点赞记录
@@ -207,6 +208,18 @@ func (dao *interactionDao) DeleteLikeInfo(ctx context.Context, uid int64, biz st
 
 type interactionDao struct {
 	db *gorm.DB
+}
+
+func (dao *interactionDao) BatchIncrReadCnt(ctx context.Context, bizs []string, ids []int64) error {
+	return dao.db.Transaction(func(tx *gorm.DB) error {
+		for i := range ids {
+			err := dao.IncrReadCnt(ctx, bizs[i], ids[i])
+			if err != nil {
+				// 对于文章这种计数器，即使少了个别文章的计数影响也不大，因此不回滚，只记录该错误。
+			}
+		}
+		return nil
+	})
 }
 
 func NewInteractionDao(db *gorm.DB) InteractionDao {

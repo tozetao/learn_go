@@ -7,9 +7,10 @@
 package main
 
 import (
-	"github.com/gin-gonic/gin"
 	"github.com/google/wire"
+	"learn_go/webook/internal/event/article"
 	"learn_go/webook/internal/repository"
+	article2 "learn_go/webook/internal/repository/article"
 	"learn_go/webook/internal/repository/cache"
 	"learn_go/webook/internal/repository/dao"
 	"learn_go/webook/internal/service"
@@ -23,7 +24,7 @@ import (
 
 // Injectors from wire.go:
 
-func InitWebServer(templateId string) *gin.Engine {
+func InitApp(templateId string) *App {
 	loggerV2 := ioc.NewLogger()
 	cmdable := ioc.NewRedis(loggerV2)
 	jwtHandler := web.NewJWTHandler(cmdable)
@@ -43,11 +44,22 @@ func InitWebServer(templateId string) *gin.Engine {
 	oAuth2WechatHandler := web.NewOAuth2WechatHandler(oAuth2Service, userService, jwtHandler)
 	testHandler := web.NewTestHandler(loggerV2)
 	engine := ioc.InitGin(v, smsHandler, userHandler, oAuth2WechatHandler, testHandler)
-	return engine
+	config := ioc.NewSaramaConfig()
+	client := ioc.NewConsumerClient(config)
+	interactionDao := dao.NewInteractionDao(db)
+	interactionCache := cache.NewInteractionCache(cmdable)
+	interactionRepository := repository.NewInteractionRepository(interactionDao, interactionCache)
+	batchReadEventConsumer := article.NewBatchReadEventConsumer(client, interactionRepository, loggerV2)
+	v2 := ioc.NewConsumers(batchReadEventConsumer)
+	app := &App{
+		server:    engine,
+		consumers: v2,
+	}
+	return app
 }
 
 // wire.go:
 
 var (
-	providers = wire.NewSet(ioc.NewLogger, ioc.NewDB, ioc.NewRedis, cache.NewCodeCache, cache.NewUserCache, dao.NewUserDao, repository.NewCodeRepository, repository.NewUserRepository, ioc.InitSMSService, ioc.InitOAuth2Service, service.NewCodeService, service.NewUserService, web.NewSMSHandler, web.NewUserHandler, web.NewOAuth2WechatHandler, web.NewJWTHandler, web.NewTestHandler, ioc.InitMiddlewares, ioc.InitGin)
+	providers = wire.NewSet(ioc.NewLogger, ioc.NewDB, ioc.NewRedis, ioc.InitMiddlewares, ioc.InitGin, ioc.InitSMSService, ioc.InitOAuth2Service, ioc.NewSaramaConfig, ioc.NewConsumerClient, article.NewBatchReadEventConsumer, ioc.NewConsumers, ioc.NewSyncProducer, article.NewSyncProducer, web.NewSMSHandler, web.NewUserHandler, web.NewOAuth2WechatHandler, web.NewJWTHandler, web.NewArticleHandler, web.NewTestHandler, service.NewCodeService, service.NewUserService, service.NewArticleService, service.NewInteractionService, repository.NewInteractionRepository, repository.NewCodeRepository, repository.NewUserRepository, article2.NewArticleRepository, article2.NewArticleReaderRepository, article2.NewArticleAuthorRepository, dao.NewUserDao, dao.NewInteractionDao, dao.NewArticleDao, cache.NewArticleCache, cache.NewCodeCache, cache.NewUserCache, cache.NewInteractionCache, wire.Struct(new(App), "*"))
 )

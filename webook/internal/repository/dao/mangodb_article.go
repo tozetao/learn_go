@@ -18,14 +18,14 @@ type MangoDBArticleDao struct {
 	node            *snowflake.Node
 }
 
-func NewMongoArticleDao(db *mongo.Database, node *snowflake.Node) ArticleDao {
-	return &MangoDBArticleDao{
-		db:              db,
-		artCol:          db.Collection("articles"),
-		publishedArtCol: db.Collection("published_articles"),
-		node:            node,
-	}
-}
+//func NewMongoArticleDao(db *mongo.Database, node *snowflake.Node) ArticleDao {
+//	return &MangoDBArticleDao{
+//		db:              db,
+//		artCol:          db.Collection("articles"),
+//		publishedArtCol: db.Collection("published_articles"),
+//		node:            node,
+//	}
+//}
 
 func (dao *MangoDBArticleDao) GetByAuthor(ctx context.Context, uid int64, offset int, limit int) ([]Article, error) {
 	panic("implement me")

@@ -144,11 +144,8 @@ func (svc *articleService) PublishV1(ctx context.Context, article domain.Article
 }
 
 func NewArticleService(
-	articleRepo article.ArticleRepository,
-	articleAuthorRepo article.AuthorRepository,
-	articleReaderRepo article.ReaderRepository,
-	producer event.Producer,
-	log logger.LoggerV2) ArticleService {
+	articleRepo article.ArticleRepository, articleAuthorRepo article.AuthorRepository, articleReaderRepo article.ReaderRepository,
+	producer event.Producer, log logger.LoggerV2) ArticleService {
 	return &articleService{
 		producer:          producer,
 		log:               log,

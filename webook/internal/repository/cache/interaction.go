@@ -11,7 +11,7 @@ import (
 )
 
 var (
-	//go:embed "./lua/interaction.lua"
+	//go:embed lua/interaction.lua
 	script string
 
 	likeCntField     = "like_cnt"

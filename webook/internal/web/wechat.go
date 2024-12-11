@@ -23,7 +23,9 @@ func NewOAuth2WechatHandler(oauth2Svc wechat.OAuth2Service, userSvc service.User
 
 func (w *OAuth2WechatHandler) RegisterRoutes(server *gin.Engine) {
 	server.GET("/oauth2/wechat/auth_url", w.Auth2Url)
-	server.Any("/oauth2/wechat/verify", w.Callback)
+	server.GET("/oauth2/wechat/verify", w.Callback)
+	server.POST("/oauth2/wechat/verify", w.Callback)
+	server.HEAD("/oauth2/wechat/verify", w.Callback)
 }
 
 // Auth2Url 返回微信OAuth认证地址

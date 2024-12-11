@@ -6,8 +6,8 @@ import (
 )
 
 type ReadEvent struct {
-	Uid       int64
-	ArticleID int64
+	Uid       int64 `json:"uid"`
+	ArticleID int64 `json:"article_id"`
 }
 
 const TopicReadEvent = "article_read"

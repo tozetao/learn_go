@@ -4,6 +4,7 @@ import (
 	"context"
 	"github.com/IBM/sarama"
 	"github.com/stretchr/testify/assert"
+	"golang.org/x/sync/errgroup"
 	"testing"
 	"time"
 )
@@ -51,18 +52,47 @@ func (c *ConsumerHandler) Cleanup(session sarama.ConsumerGroupSession) error {
 func (c *ConsumerHandler) ConsumeClaim(session sarama.ConsumerGroupSession, claim sarama.ConsumerGroupClaim) error {
 	c.t.Logf("topic: %s, partition: %d", claim.Topic(), claim.Partition())
 	msgs := claim.Messages()
-	for msg := range msgs {
-		c.t.Logf("message: %s, topic: %s, partition: %d, offset: %d", string(msg.Value), msg.Topic, msg.Partition, msg.Offset)
 
-		if msg.Offset%2 == 0 {
-			// 忽略offset为偶数的消息
-			c.t.Log("ignore the message.")
-			continue
-		} else {
+	const batchSize = 1000
+
+	for {
+		var eg errgroup.Group
+		done := false
+		msgContainer := make([]*sarama.ConsumerMessage, 0, batchSize)
+		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+
+		for i := 0; i < batchSize; i++ {
+			if done {
+				break
+			}
+			select {
+			case <-ctx.Done():
+				done = true
+			case msg, ok := <-msgs:
+				if !ok {
+					cancel()
+					return nil
+				}
+				msgContainer = append(msgContainer, msg)
+				// 并发处理消息
+				eg.Go(func() error {
+					c.t.Log(string(msg.Value))
+					return nil
+				})
+			}
+		}
+
+		cancel()
+		err := eg.Wait()
+		if err != nil {
+			// 记录错误
+		}
+
+		// 批量提交消息
+		for _, msg := range msgContainer {
 			session.MarkMessage(msg, "")
 		}
 	}
-	return nil
 }
 
 func (c *ConsumerHandler) ConsumeClaimV1(session sarama.ConsumerGroupSession, claim sarama.ConsumerGroupClaim) error {

@@ -54,3 +54,14 @@ func TestViper2(t *testing.T) {
 	}
 	fmt.Println(config)
 }
+
+func TestViper3(t *testing.T) {
+	//configFile := pflag.String("config", "./config/dev.yaml", "配置文件路径")
+	//pflag.Parse()
+
+	//fmt.Printf("configFile:%s\n", *configFile)
+	viper.SetConfigFile("../webook/config/dev.yaml")
+	if err := viper.ReadInConfig(); err != nil {
+		panic(err)
+	}
+}

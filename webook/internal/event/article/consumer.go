@@ -3,7 +3,6 @@ package article
 import (
 	"context"
 	"github.com/IBM/sarama"
-	"learn_go/webook/internal/event"
 	"learn_go/webook/internal/repository"
 	"learn_go/webook/pkg/logger"
 	saramax "learn_go/webook/pkg/sarama"
@@ -25,7 +24,7 @@ type Consumer struct {
 }
 
 func NewConsumer(client sarama.Client, interactionRepo repository.InteractionRepository,
-	l logger.LoggerV2) event.Consumer {
+	l logger.LoggerV2) *Consumer {
 	return &Consumer{
 		interactionRepo: interactionRepo,
 		client:          client,
@@ -52,7 +51,7 @@ func (c *Consumer) Start() error {
 
 // Consume 消费文章读取时间
 func (c *Consumer) Consume(event ReadEvent, topic string, partition int32, offset int64) error {
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second*1)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
 	return c.interactionRepo.IncrReadCnt(ctx, "article", event.ArticleID)
 }

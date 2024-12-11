@@ -3,7 +3,6 @@ package main
 import (
 	"fmt"
 	"github.com/gin-gonic/gin"
-	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
 	_ "github.com/spf13/viper/remote"
 	"go.uber.org/zap"
@@ -14,24 +13,32 @@ func main() {
 	InitConfig()
 	//InitLogger()
 
-	server := InitWebServer("test-template")
+	app := InitApp("test-template")
 
-	server.GET("/", func(context *gin.Context) {
+	// 启动消费者服务
+	for _, consumer := range app.consumers {
+		err := consumer.Start()
+		if err != nil {
+			panic(err)
+		}
+	}
+
+	// 启动web服务
+	app.server.GET("/", func(context *gin.Context) {
 		context.String(http.StatusOK, "hello world")
 	})
-
-	server.Run(":9130")
+	app.server.Run(":9130")
 }
 
 func InitConfig() {
-	configFile := pflag.String("config", "config/dev.yaml", "配置文件路径")
-	pflag.Parse()
+	//configFile := pflag.String("config", "./config/dev.yaml", "配置文件路径")
+	//pflag.Parse()
+	//fmt.Printf("%v\n", *configFile)
+	//viper.SetConfigFile(*configFile)
 
-	//viper.SetConfigName("dev")
-	//viper.SetConfigType("yaml")
-	//viper.AddConfigPath("config")
-
-	viper.SetConfigFile(*configFile)
+	viper.SetConfigName("dev")
+	viper.SetConfigType("yaml")
+	viper.AddConfigPath("config")
 	err := viper.ReadInConfig()
 	if err != nil {
 		panic(fmt.Errorf("fatal error config file: %w", err))
