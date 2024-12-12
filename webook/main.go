@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"github.com/gin-gonic/gin"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/spf13/viper"
 	_ "github.com/spf13/viper/remote"
 	"go.uber.org/zap"
@@ -22,6 +23,9 @@ func main() {
 			panic(err)
 		}
 	}
+
+	// 启动监控服务
+	initPrometheus()
 
 	// 启动web服务
 	app.server.GET("/", func(context *gin.Context) {
@@ -66,4 +70,11 @@ func InitLogger() {
 		panic(err)
 	}
 	zap.ReplaceGlobals(logger)
+}
+
+func initPrometheus() {
+	go func() {
+		http.Handle("/metrics", promhttp.Handler())
+		http.ListenAndServe(":8081", nil)
+	}()
 }

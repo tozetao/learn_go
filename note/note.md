@@ -5,7 +5,7 @@ https://gitee.com/geektime-geekbang_admin/geektime-basic-go
 #### 进度
 
 ```
-增加阅读数、文章点赞、文章收藏
+可观测性
 ```
 
 
@@ -23,11 +23,31 @@ git checkout -b install v.x.x
 
 
 
+
+
 #### 问题
 
-
-
 ````
+
+
+### kafka相关
+- 怎么知道一个消费者组中有多少个消费者，每个消费者在消费主题的哪个分区？
+- 测试kafka分片消费消息的顺序
+
+- kafka如何设置数据保存的时间？
+- sarama的偏移量设置，最新和最旧有什么区别?
+  OffsetNewest、OffsetOldest
+
+- 如果多个goroutine返回错误，那么errGroup.Wait()究竟返回的是哪个错误？
+
+
+
+
+
+!(a && b)等价于什么
+!(a || b)等价于什么
+
+
 
 
 
@@ -44,15 +64,6 @@ https://github.com/ecodeclub/ekit
 高级：基于树形结构衍生出来的类型、基于跳表衍生出来的类型、ben copier机制。
 
 
-
-!(a && b)等价于什么
-!(a || b)等价于什么
-
-
-
-作业：
-
-```
 实现切片的删除操作
 - 考虑高性能操作
 - 改造成泛型方法
@@ -63,8 +74,5 @@ https://github.com/ecodeclub/ekit
 - 求最大值、最小值
 - 添加、删除、查找、过滤、Map Reduce。
 - 集合运算：交集、并集、差集
-```
-
-
 ````
 

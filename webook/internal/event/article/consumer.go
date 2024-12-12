@@ -50,7 +50,7 @@ func (c *Consumer) Start() error {
 }
 
 // Consume 消费文章读取时间
-func (c *Consumer) Consume(event ReadEvent, topic string, partition int32, offset int64) error {
+func (c *Consumer) Consume(message *sarama.ConsumerMessage, event ReadEvent) error {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
 	return c.interactionRepo.IncrReadCnt(ctx, "article", event.ArticleID)

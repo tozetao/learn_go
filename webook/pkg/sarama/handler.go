@@ -13,10 +13,10 @@ import (
 // Handler sarama.ConsumerGroupHandler的实现
 type Handler[T any] struct {
 	l  logger.LoggerV2
-	fn func(event T, topic string, partition int32, offset int64) error
+	fn func(message *sarama.ConsumerMessage, event T) error
 }
 
-func NewHandler[T any](l logger.LoggerV2, fn func(event T, topic string, partition int32, offset int64) error) sarama.ConsumerGroupHandler {
+func NewHandler[T any](l logger.LoggerV2, fn func(message *sarama.ConsumerMessage, event T) error) sarama.ConsumerGroupHandler {
 	return &Handler[T]{
 		l:  l,
 		fn: fn,
@@ -51,7 +51,7 @@ func (c *Handler[T]) ConsumeClaim(session sarama.ConsumerGroupSession, claim sar
 		//	// 重试：使用装饰器来实现重试的逻辑
 		//}
 		for i := 0; i < 3; i++ {
-			err = c.fn(data, msg.Topic, msg.Partition, msg.Offset)
+			err = c.fn(msg, data)
 			if err == nil {
 				break
 			}

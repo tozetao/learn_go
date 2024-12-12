@@ -142,6 +142,7 @@ func (repo *interactionRepository) BatchIncrReadCnt(ctx context.Context, bizs []
 		return err
 	}
 
+	// TODO redis批量的执行lua脚本，压力很大，也可以考虑合并数据，批量执行。
 	// 2. 批量增加缓存
 	go func() {
 		for i := range bizIDs {

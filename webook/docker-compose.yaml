@@ -1,18 +1,18 @@
 version: "3"
 # 我这个 docker compose 由几个服务组成
 services:
-#  mysql8:
-#    image: mysql:8.0.29
-#    restart: always
-#    command: --default-authentication-plugin=mysql_native_password
-#    environment:
-#      MYSQL_ROOT_PASSWORD: root
-#    volumes:
-#      #      - 初始化脚本
-#      - ./script/mysql/:/docker-entrypoint-initdb.d/
-#    ports:
-#      #      - 外部访问用 13316
-#      - 13316:3306
+  mysql8:
+    image: mysql:8.0.29
+    restart: always
+    command: --default-authentication-plugin=mysql_native_password
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+    volumes:
+      #      - 初始化脚本
+      - ./script/mysql/:/docker-entrypoint-initdb.d/
+    ports:
+      #      - 外部访问用 13316
+      - 13316:3306
 
 #  mongo:
 #    image: mongo:6.0
@@ -56,3 +56,10 @@ services:
       - KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP=CONTROLLER:PLAINTEXT,EXTERNAL:PLAINTEXT,PLAINTEXT:PLAINTEXT
       - KAFKA_CFG_CONTROLLER_QUORUM_VOTERS=0@kafka:9093
       - KAFKA_CFG_CONTROLLER_LISTENER_NAMES=CONTROLLER
+
+  prometheus:
+    image: prom/prometheus:v2.47.2
+    volumes:
+      - ./prometheus.yaml:/etc/prometheus/prometheus.yml
+    ports:
+      - 9090:9090

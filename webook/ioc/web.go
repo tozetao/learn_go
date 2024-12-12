@@ -15,7 +15,7 @@ func InitGin(
 	smsHandler *web.SMSHandler,
 	userHandler *web.UserHandler,
 	oauthWechatHandler *web.OAuth2WechatHandler,
-	testHandler *web.TestHandler) *gin.Engine {
+) *gin.Engine {
 
 	server := gin.Default()
 	server.Use(middlewares...)
@@ -24,7 +24,10 @@ func InitGin(
 	smsHandler.RegisterRoutes(server)
 	userHandler.RegisterRoutes(server)
 	oauthWechatHandler.RegisterRoutes(server)
-	testHandler.RegisterHandler(server)
+	//testHandler.RegisterHandler(server)
+
+	h := web.ObserveHandler{}
+	h.RegisterHandler(server)
 
 	return server
 }
@@ -70,7 +73,7 @@ func authHdl(handler *web.JWTHandler) gin.HandlerFunc {
 		"/sms/send",
 		"/users/refresh_token",
 		"/",
-		"/test",
+		"/observe/metric",
 	}
 	return login.IgnorePath(s...).Builder()
 }

@@ -42,7 +42,7 @@ func (c *BatchReadEventConsumer) Start() error {
 }
 
 // Consume 消费文章读取时间
-func (c *BatchReadEventConsumer) Consume(events []ReadEvent, topic string) error {
+func (c *BatchReadEventConsumer) Consume(messages []*sarama.ConsumerMessage, events []ReadEvent) error {
 	//ctx, cancel := context.WithTimeout(context.Background(), time.Second*1)
 	//defer cancel()
 	ctx := context.Background()

@@ -83,6 +83,7 @@ func (svc *articleService) GetByID(ctx context.Context, articleID int64) (domain
 func (svc *articleService) GetPubArticle(ctx context.Context, uid, articleID int64) (domain.Article, error) {
 	art, err := svc.articleRepo.GetPubByID(ctx, articleID)
 	go func() {
+		// TODO 生产者也可以批量发送消息，减少kafka broker的压力。实现类型ProduceReadEvents([]event.ReadEvent)的接口。
 		err := svc.producer.ProduceReadEvent(event.ReadEvent{
 			Uid:       uid,
 			ArticleID: articleID,

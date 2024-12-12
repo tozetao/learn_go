@@ -225,24 +225,6 @@ kafka-console-consumer.sh --bootstrap-server=127.0.0.1:9092 --topic=my_topic
 
 
 
-### 问题
-
-- kafka如何设置数据保存的时间？
-
-- 测试kafka分片消费消息的顺序
-
-- sarama的偏移量设置，最新和最旧有什么区别?
-
-  OffsetNewest、OffsetOldest
-
-- 如果多个goroutine返回错误，那么errGroup.Wait()究竟返回的是哪个错误？
-
-
-
-
-
-
-
 
 
 
