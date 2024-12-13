@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"github.com/bwmarrin/snowflake"
 	"github.com/stretchr/testify/assert"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
@@ -84,4 +85,13 @@ func TestReceive(t *testing.T) {
 
 	foo.Change()
 	foo.Display()
+}
+
+func TestSnowFlake(t *testing.T) {
+	node, err := snowflake.NewNode(1)
+	if err != nil {
+		panic(err)
+	}
+	id := node.Generate()
+	fmt.Printf("id: %d\n", id)
 }
