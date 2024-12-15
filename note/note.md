@@ -5,7 +5,8 @@ https://gitee.com/geektime-geekbang_admin/geektime-basic-go
 #### 进度
 
 ```
-可观测性
+完成榜单模型的计算
+完成可观测性章节的代码
 ```
 
 

@@ -24,7 +24,6 @@ func InitGin(
 	smsHandler.RegisterRoutes(server)
 	userHandler.RegisterRoutes(server)
 	oauthWechatHandler.RegisterRoutes(server)
-	//testHandler.RegisterHandler(server)
 
 	h := web.ObserveHandler{}
 	h.RegisterHandler(server)
@@ -37,7 +36,18 @@ func InitMiddlewares(jwtHandler *web.JWTHandler, logger logger.LoggerV2) []gin.H
 		corsHdl(),
 		authHdl(jwtHandler),
 		logHdl(logger),
+		requestSummary(),
 	}
+}
+
+func requestSummary() gin.HandlerFunc {
+	rs := middleware.RequestSummary{
+		Namespace:  "xzt_test",
+		Subsystem:  "webook",
+		Name:       "gin_http",
+		InstanceID: "my-instance-1",
+	}
+	return rs.Build()
 }
 
 // CORSMiddleware CORS中间件
