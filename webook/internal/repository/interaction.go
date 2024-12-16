@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 	"errors"
+	"github.com/ecodeclub/ekit/slice"
 	"golang.org/x/sync/errgroup"
 	"learn_go/webook/internal/domain"
 	"learn_go/webook/internal/repository/cache"
@@ -26,6 +27,7 @@ type InteractionRepository interface {
 	GetUserLikeInfo(ctx context.Context, uid int64, biz string, bizID int64) (domain.UserLike, error)
 	// GetUserFavoriteInfo 获取用户的某个资源的收藏信息
 	GetUserFavoriteInfo(ctx context.Context, uid int64, biz string, bizID int64) (domain.UserFavorite, error)
+	GetByIDs(ctx context.Context, biz string, ds []int64) ([]domain.Interaction, error)
 }
 
 func (repo *interactionRepository) GetUserLikeInfo(ctx context.Context, uid int64, biz string, bizID int64) (domain.UserLike, error) {
@@ -130,6 +132,17 @@ func (repo *interactionRepository) AddFavoriteItem(ctx context.Context, uid int6
 type interactionRepository struct {
 	dao   dao.InteractionDao
 	cache cache.InteractionCache
+}
+
+func (repo *interactionRepository) GetByIDs(ctx context.Context, biz string, ds []int64) ([]domain.Interaction, error) {
+	inters, err := repo.dao.GetByIDs(ctx, biz, ds)
+	if err != nil {
+		return nil, err
+	}
+	domainObjs := slice.Map(inters, func(idx int, src dao.Interaction) domain.Interaction {
+		return repo.toDomain(src)
+	})
+	return domainObjs, nil
 }
 
 func (repo *interactionRepository) BatchIncrReadCnt(ctx context.Context, bizs []string, bizIDs []int64) error {

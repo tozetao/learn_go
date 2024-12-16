@@ -50,10 +50,12 @@ type ArticleService interface {
 
 	Withdraw(ctx context.Context, article domain.Article) error
 
+	// GetList 根据作者id查询文章列表
 	GetList(ctx context.Context, uid int64, offset int, limit int) ([]domain.Article, error)
 	GetByID(ctx context.Context, id int64) (domain.Article, error)
 
 	ListPub(c context.Context, time time.Time, offset int, limit int) ([]domain.Article, error)
+	// GetPubArticle 根据id、uid查询已发布的文章
 	GetPubArticle(ctx context.Context, uid, id int64) (domain.Article, error)
 }
 

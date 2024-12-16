@@ -20,6 +20,8 @@ type InteractionService interface {
 	Liked(ctx context.Context, uid int64, biz string, bizID int64) (bool, error)
 	// Collected 用户是否收藏
 	Collected(ctx context.Context, uid int64, biz string, bizID int64) (bool, error)
+
+	GetByIDs(ctx context.Context, biz string, bizIDs []int64) ([]domain.Interaction, error)
 }
 
 func (svc *interactionService) Liked(ctx context.Context, uid int64, biz string, bizID int64) (bool, error) {
@@ -47,6 +49,10 @@ func (svc *interactionService) Favorite(ctx context.Context, uid int64, favorite
 type interactionService struct {
 	repo     repository.InteractionRepository
 	producer event.Producer
+}
+
+func (svc *interactionService) GetByIDs(ctx context.Context, biz string, bizIDs []int64) ([]domain.Interaction, error) {
+	return svc.repo.GetByIDs(ctx, biz, bizIDs)
 }
 
 func (svc *interactionService) Get(ctx context.Context, uid int64, biz string, bizID int64) (domain.Interaction, error) {

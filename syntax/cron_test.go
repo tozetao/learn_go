@@ -7,6 +7,10 @@ import (
 	"time"
 )
 
+// job不属于ddd的领域范畴。
+// service的调用方可以是web、rpc、command、job
+// 我们先实现service，再实现job
+
 func TestCron(t *testing.T) {
 	//ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
 	//defer cancel()

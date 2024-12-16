@@ -68,6 +68,8 @@ type InteractionDao interface {
 	GetUserLikeInfo(ctx context.Context, uid int64, biz string, bizID int64) (UserLike, error)
 	GetUserFavoriteInfo(ctx context.Context, uid int64, biz string, id int64) (UserFavorite, error)
 	BatchIncrReadCnt(ctx context.Context, bizs []string, ds []int64) error
+
+	GetByIDs(ctx context.Context, biz string, ds []int64) ([]Interaction, error)
 }
 
 func (dao *interactionDao) GetUserFavoriteInfo(ctx context.Context, uid int64, biz string, bizID int64) (UserFavorite, error) {
@@ -208,6 +210,14 @@ func (dao *interactionDao) DeleteLikeInfo(ctx context.Context, uid int64, biz st
 
 type interactionDao struct {
 	db *gorm.DB
+}
+
+func (dao *interactionDao) GetByIDs(ctx context.Context, biz string, ds []int64) ([]Interaction, error) {
+	var inters []Interaction
+	err := dao.db.WithContext(ctx).Model(&Interaction{}).
+		Where("biz = ? and biz_id in (?)", biz, ds).
+		Find(&inters).Error
+	return inters, err
 }
 
 func (dao *interactionDao) BatchIncrReadCnt(ctx context.Context, bizs []string, ids []int64) error {
