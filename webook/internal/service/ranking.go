@@ -8,10 +8,12 @@ import (
 	"time"
 )
 
+// TODO 编写测试代码
+
 // RankingService 定义榜单服务接口，除非你的榜单业务很复杂，那么可以抽象成单独的一个接口
 type RankingService interface {
 	// TopN 计算出N个排名
-	TopN(n int) error
+	TopN() error
 }
 
 //type compareFn[T any] func(src T, dst T)
@@ -53,6 +55,7 @@ func (svc *rankingService) topN() ([]domain.Article, error) {
 	// 为了让榜单的数据稳点一些，我们只计算7天内的数据。
 	now := time.Now()
 	offset := 0
+	deadline := now.Add(-24 * 7 * time.Hour)
 
 	container := queue.NewPriorityQueue[node](svc.length, func(src node, dst node) int {
 		if src.Score > dst.Score {
@@ -80,7 +83,8 @@ func (svc *rankingService) topN() ([]domain.Article, error) {
 
 		nodes := slice.Map(articles, func(idx int, src domain.Article) node {
 			return node{
-				Score: svc.scoreFn(src.UTime, inters[src.ID].Likes),
+				article: src,
+				Score:   svc.scoreFn(src.UTime, inters[src.ID].Likes),
 			}
 		})
 
@@ -98,11 +102,18 @@ func (svc *rankingService) topN() ([]domain.Article, error) {
 			}
 		}
 
-		// 查询的记录包含7天外的数据就结束循环
-		diffDays := now.Sub(articles[len(articles)-1].UTime).Hours() / 24
-		if diffDays >= 7 || len(nodes) < svc.batchSize {
+		// 查询的文章的更新时间在7天外，或者查询出的数量不够一批的时候就结束循环
+		lastArt := articles[len(articles)-1]
+		if len(articles) < svc.batchSize || lastArt.UTime.Before(deadline) {
 			break
 		}
+		offset += svc.length
 	}
-	return nil, nil
+
+	result := make([]domain.Article, svc.length)
+	for i := container.Len() - 1; i >= 0; i++ {
+		n, _ := container.Dequeue()
+		result[i] = n.article
+	}
+	return result, nil
 }

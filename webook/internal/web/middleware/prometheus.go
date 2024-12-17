@@ -1,26 +1,25 @@
 package middleware
 
 import (
-	"fmt"
 	"github.com/gin-gonic/gin"
 	"github.com/prometheus/client_golang/prometheus"
 	"strconv"
 	"time"
 )
 
-type RequestSummary struct {
+type Metrics struct {
 	Namespace  string
 	Subsystem  string
 	Name       string
 	InstanceID string
 }
 
-func (m *RequestSummary) Build() gin.HandlerFunc {
+func (m *Metrics) Build() gin.HandlerFunc {
 	labels := []string{"pattern", "method", "status"}
 	vector := prometheus.NewSummaryVec(prometheus.SummaryOpts{
 		Namespace: m.Namespace,
 		Subsystem: m.Subsystem,
-		Name:      m.Name,
+		Name:      "http_resp_time",
 		Help:      "gin http请求统计",
 		ConstLabels: map[string]string{
 			"instance_id": m.InstanceID,
@@ -33,17 +32,33 @@ func (m *RequestSummary) Build() gin.HandlerFunc {
 	}, labels)
 	prometheus.MustRegister(vector)
 
+	gauge := prometheus.NewGauge(prometheus.GaugeOpts{
+		Namespace: m.Namespace,
+		Subsystem: m.Subsystem,
+		Name:      "http_active_reqs",
+		Help:      "活跃请求数",
+		ConstLabels: map[string]string{
+			"instance_id": m.InstanceID,
+		},
+	})
+	prometheus.MustRegister(gauge)
+
 	return func(ctx *gin.Context) {
 		start := time.Now()
+		gauge.Inc()
+
 		defer func() {
+			gauge.Dec()
 			// 准备上报 prometheus
 			duration := time.Since(start).Milliseconds()
 			method := ctx.Request.Method
 			pattern := ctx.FullPath()
 			status := ctx.Writer.Status()
-			vector.WithLabelValues(pattern, method, strconv.Itoa(status)).
+			vector.WithLabelValues(
+				pattern,
+				method,
+				strconv.Itoa(status)).
 				Observe(float64(duration))
-			fmt.Println("上报信息了")
 		}()
 
 		ctx.Next()

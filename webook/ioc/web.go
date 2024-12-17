@@ -36,18 +36,18 @@ func InitMiddlewares(jwtHandler *web.JWTHandler, logger logger.LoggerV2) []gin.H
 		corsHdl(),
 		authHdl(jwtHandler),
 		logHdl(logger),
-		requestSummary(),
+		metrics(),
 	}
 }
 
-func requestSummary() gin.HandlerFunc {
-	rs := middleware.RequestSummary{
-		Namespace:  "xzt_test",
+func metrics() gin.HandlerFunc {
+	mid := &middleware.Metrics{
+		Namespace:  "go_project",
 		Subsystem:  "webook",
-		Name:       "gin_http",
+		Name:       "http_resp_time",
 		InstanceID: "my-instance-1",
 	}
-	return rs.Build()
+	return mid.Build()
 }
 
 // CORSMiddleware CORS中间件

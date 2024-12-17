@@ -42,15 +42,15 @@ func NewConsumers(articleEventConsumer *article.BatchReadEventConsumer) []event.
 func NewSyncProducer(saramaCfg *sarama.Config) sarama.SyncProducer {
 	// 可以通过读取配置来进行初始化
 	type Config struct {
-		Addr []string
+		Addrs []string
 	}
 	var cfg Config
-	err := viper.Unmarshal(&cfg)
+	err := viper.UnmarshalKey("kafka", &cfg)
 	if err != nil {
 		panic(err)
 	}
 
-	producer, err := sarama.NewSyncProducer(cfg.Addr, saramaCfg)
+	producer, err := sarama.NewSyncProducer(cfg.Addrs, saramaCfg)
 	if err != nil {
 		panic(err)
 	}
