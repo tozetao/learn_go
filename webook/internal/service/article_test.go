@@ -154,7 +154,7 @@ func Test_articleService_PublishV1(t *testing.T) {
 			defer ctrl.Finish()
 
 			authorRepo, readerRepo := testCase.mock(ctrl)
-			svc := NewArticleService(nil, authorRepo, readerRepo, logger.NewNopLogger())
+			svc := NewArticleService(nil, authorRepo, readerRepo, nil, logger.NewNopLogger())
 			id, err := svc.PublishV1(context.Background(), testCase.article)
 
 			assert.Equal(t, testCase.wantErr, err)

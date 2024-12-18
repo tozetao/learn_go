@@ -41,6 +41,7 @@ note: 如果俩个数据源的结构相似度较高，代码相似度较高，�
 
 */
 
+//go:generate mockgen -source=./article.go -package=svcmocks -destination=./mocks/article.mock.go ArticleService
 type ArticleService interface {
 	Save(ctx context.Context, article domain.Article) (int64, error)
 

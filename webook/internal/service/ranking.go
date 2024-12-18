@@ -5,10 +5,12 @@ import (
 	"github.com/ecodeclub/ekit/queue"
 	"github.com/ecodeclub/ekit/slice"
 	"learn_go/webook/internal/domain"
+	"math"
 	"time"
 )
 
 // TODO 编写测试代码
+// 问题：该service的配置是哪里提供比较好?
 
 // RankingService 定义榜单服务接口，除非你的榜单业务很复杂，那么可以抽象成单独的一个接口
 type RankingService interface {
@@ -38,10 +40,17 @@ type node struct {
 	article domain.Article
 }
 
-func NewRankingService(batchSize int) RankingService {
+func NewRankingService(artSvc ArticleService, interSvc InteractionService) *rankingService {
 	svc := &rankingService{
-		batchSize: batchSize,
-		length:    100,
+		batchSize: 500,
+		length:    10,
+		artSvc:    artSvc,
+		interSvc:  interSvc,
+		scoreFn: func(utime time.Time, likes int64) float64 {
+			// 时间
+			duration := time.Since(utime).Seconds()
+			return float64(likes-1) / math.Pow(duration+2, 1.5)
+		},
 	}
 	return svc
 }
@@ -110,8 +119,9 @@ func (svc *rankingService) topN() ([]domain.Article, error) {
 		offset += svc.length
 	}
 
-	result := make([]domain.Article, svc.length)
-	for i := container.Len() - 1; i >= 0; i++ {
+	l := container.Len()
+	result := make([]domain.Article, l)
+	for i := l - 1; i >= 0; i-- {
 		n, _ := container.Dequeue()
 		result[i] = n.article
 	}

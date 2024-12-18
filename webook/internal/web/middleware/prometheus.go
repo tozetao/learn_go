@@ -54,11 +54,7 @@ func (m *Metrics) Build() gin.HandlerFunc {
 			method := ctx.Request.Method
 			pattern := ctx.FullPath()
 			status := ctx.Writer.Status()
-			vector.WithLabelValues(
-				pattern,
-				method,
-				strconv.Itoa(status)).
-				Observe(float64(duration))
+			vector.WithLabelValues(pattern, method, strconv.Itoa(status)).Observe(float64(duration))
 		}()
 
 		ctx.Next()

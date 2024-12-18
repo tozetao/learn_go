@@ -35,7 +35,7 @@ func InitMiddlewares(jwtHandler *web.JWTHandler, logger logger.LoggerV2) []gin.H
 	return []gin.HandlerFunc{
 		corsHdl(),
 		authHdl(jwtHandler),
-		logHdl(logger),
+		//logHdl(logger),
 		metrics(),
 	}
 }

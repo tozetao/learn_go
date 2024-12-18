@@ -7,6 +7,7 @@ import (
 	"learn_go/webook/internal/repository"
 )
 
+//go:generate mockgen -source=./interaction.go -package=svcmocks -destination=./mocks/interaction.mock.go InteractionService
 type InteractionService interface {
 	View(ctx context.Context, biz string, bizID int64) error
 
@@ -21,7 +22,7 @@ type InteractionService interface {
 	// Collected 用户是否收藏
 	Collected(ctx context.Context, uid int64, biz string, bizID int64) (bool, error)
 
-	GetByIDs(ctx context.Context, biz string, bizIDs []int64) ([]domain.Interaction, error)
+	GetByIDs(ctx context.Context, biz string, bizIDs []int64) (map[int64]domain.Interaction, error)
 }
 
 func (svc *interactionService) Liked(ctx context.Context, uid int64, biz string, bizID int64) (bool, error) {
@@ -51,8 +52,16 @@ type interactionService struct {
 	producer event.Producer
 }
 
-func (svc *interactionService) GetByIDs(ctx context.Context, biz string, bizIDs []int64) ([]domain.Interaction, error) {
-	return svc.repo.GetByIDs(ctx, biz, bizIDs)
+func (svc *interactionService) GetByIDs(ctx context.Context, biz string, bizIDs []int64) (map[int64]domain.Interaction, error) {
+	inters, err := svc.repo.GetByIDs(ctx, biz, bizIDs)
+	if err != nil {
+		return nil, err
+	}
+	res := make(map[int64]domain.Interaction, len(inters))
+	for _, inter := range inters {
+		res[inter.ID] = inter
+	}
+	return res, nil
 }
 
 func (svc *interactionService) Get(ctx context.Context, uid int64, biz string, bizID int64) (domain.Interaction, error) {
