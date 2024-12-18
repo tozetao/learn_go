@@ -5,6 +5,7 @@ import (
 	"github.com/ecodeclub/ekit/queue"
 	"github.com/ecodeclub/ekit/slice"
 	"learn_go/webook/internal/domain"
+	"learn_go/webook/internal/repository"
 	"math"
 	"time"
 )
@@ -22,6 +23,7 @@ type RankingService interface {
 
 // 我们所依赖的数据，可以通过repository获取，也可以聚合多个服务来获取。
 type rankingService struct {
+	repo repository.RankingRepository
 	// 批量查询的大小
 	batchSize int
 
@@ -40,8 +42,12 @@ type node struct {
 	article domain.Article
 }
 
-func NewRankingService(artSvc ArticleService, interSvc InteractionService) *rankingService {
+func NewRankingService(
+	artSvc ArticleService,
+	interSvc InteractionService,
+	repo repository.RankingRepository) *rankingService {
 	svc := &rankingService{
+		repo:      repo,
 		batchSize: 500,
 		length:    10,
 		artSvc:    artSvc,
@@ -55,12 +61,17 @@ func NewRankingService(artSvc ArticleService, interSvc InteractionService) *rank
 	return svc
 }
 
-func (svc *rankingService) TopN() error {
-	return nil
+// TopN topn接口应该暴漏context，让外部来控制你执行的超市时间。
+func (svc *rankingService) TopN(ctx context.Context) error {
+	arts, err := svc.topN(ctx)
+	if err != nil {
+		return err
+	}
+	return svc.repo.ReplaceTopN(ctx, arts)
 }
 
 // TopN 文章的TopN计算
-func (svc *rankingService) topN() ([]domain.Article, error) {
+func (svc *rankingService) topN(ctx context.Context) ([]domain.Article, error) {
 	// 为了让榜单的数据稳点一些，我们只计算7天内的数据。
 	now := time.Now()
 	offset := 0
@@ -78,14 +89,14 @@ func (svc *rankingService) topN() ([]domain.Article, error) {
 
 	for {
 		// now：now是为了秒顶记录，where time < ?，这样多个循环查询出来的记录总是相同的。
-		articles, err := svc.artSvc.ListPub(context.Background(), now, offset, svc.batchSize)
+		articles, err := svc.artSvc.ListPub(ctx, now, offset, svc.batchSize)
 		if err != nil {
 			return nil, err
 		}
 		interIDs := slice.Map(articles, func(idx int, src domain.Article) int64 {
 			return src.ID
 		})
-		inters, err := svc.interSvc.GetByIDs(context.Background(), "article", interIDs)
+		inters, err := svc.interSvc.GetByIDs(ctx, "article", interIDs)
 		if err != nil {
 			return nil, err
 		}
