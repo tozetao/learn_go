@@ -24,15 +24,9 @@ func TestCron(t *testing.T) {
 	time.Sleep(time.Second * 10)
 
 	stop := c.Stop()
-	t.Log("准备结束了")
+	t.Log("准备关闭定时任务")
 	<-stop.Done()
-	t.Log("结束了")
-
-	//select {
-	//case <-ctx.Done():
-	//	t.Log("超时，程序结束了")
-	//}
-	//t.Log("结束了")
+	t.Log("定时任务已关闭")
 }
 
 type ShowStr struct {

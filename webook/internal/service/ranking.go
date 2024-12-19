@@ -10,13 +10,59 @@ import (
 	"time"
 )
 
-// TODO 编写测试代码
-// 问题：该service的配置是哪里提供比较好?
+/*
+如何保证高性能?
+	要保证高性能必然会引入本地缓存。基本解决方案都是：本地缓存 + redis缓存 + mysql方案
+
+操作
+	查找：先找本地缓存，再查找redis，最后查找mysql
+	更新：先更新数据库，再更新本地缓存，最后更新redis。
+
+	为什么更新要先更新本地缓存，再更新redis?
+		因为本地缓存基本不可能失败，当进程已经再处理请求了，更新本地缓存只是CPU操作，没有其他io操作。
+
+
+如何保证高可用?
+	整个榜单的功能都是依赖于redis和mysql。
+	如果mysql奔溃了，定时任务肯定更新失败。
+	如果redis奔溃了，当本地缓存失效后，redis也不可用，那么查询接口也肯定失败。
+
+	规避mysql不可用的问题：
+		让redis的缓存永不过期，如果mysql不可用了，即使定时任务无法执行也仍然会有数据可访问。
+
+
+	从代码层面上做一个兜底：
+		给Get接口做一个兜底，正常情况下是从本地缓存中获取，获取不到去redis里面获取。
+		那么我们可以在redis奔溃的时候，再次从本地缓存获取，此时是不会检测本地缓存是否过期了。
+
+		强制使用本地缓存的漏洞：在redis不可用时，一个新的节点本地缓存它是获取不到数据的，可以考虑fail over来想其他节点拿去数据。
+
+高可用也是可以通过本地缓存来实现的。
+让本地缓存的过期时间 大于 redis的过期时间，当redis不可用的时候，那么本地缓存过期时间 - redis过期时间，这一段时间内起码服务是可用的。
+
+
+
+
+本地缓存的过期时间、redis缓存的过期时间该如何设置?
+	基本都是本地缓存过期时间 > redis缓存过期时间
+
+
+多实例如何解决本地缓存问题？
+	在实例下，只会有一个实例去计算榜单来更新缓存。
+
+	对于已启动的实例：某个实例一旦计算完成榜单，可以采用Pub/Sub的模式让其他实例更新本地缓存。
+	对于新启动的实例：新启动的实例本地缓存是不存在热榜数据的，因为可以采用fail over，在bff层请求某个实例，如果不存在则去其他实例获取。
+
+
+
+*/
+
+// 如何保证高可用?
 
 // RankingService 定义榜单服务接口，除非你的榜单业务很复杂，那么可以抽象成单独的一个接口
 type RankingService interface {
 	// TopN 计算出N个排名
-	TopN() error
+	TopN(ctx context.Context) error
 }
 
 //type compareFn[T any] func(src T, dst T)
@@ -45,20 +91,21 @@ type node struct {
 func NewRankingService(
 	artSvc ArticleService,
 	interSvc InteractionService,
-	repo repository.RankingRepository) *rankingService {
+	repo repository.RankingRepository) RankingService {
 	svc := &rankingService{
 		repo:      repo,
 		batchSize: 500,
 		length:    10,
 		artSvc:    artSvc,
 		interSvc:  interSvc,
-		scoreFn: func(utime time.Time, likes int64) float64 {
-			// 时间
-			duration := time.Since(utime).Seconds()
-			return float64(likes-1) / math.Pow(duration+2, 1.5)
-		},
 	}
+	svc.scoreFn = svc.score
 	return svc
+}
+
+func (svc *rankingService) score(utime time.Time, likes int64) float64 {
+	duration := time.Since(utime).Seconds()
+	return float64(likes-1) / math.Pow(duration+2, 1.5)
 }
 
 // TopN topn接口应该暴漏context，让外部来控制你执行的超市时间。
@@ -121,10 +168,13 @@ func (svc *rankingService) topN(ctx context.Context) ([]domain.Article, error) {
 				_ = container.Enqueue(lastNode)
 			}
 		}
-
-		// 查询的文章的更新时间在7天外，或者查询出的数量不够一批的时候就结束循环
+		//查询出的数量不够一批的时候就结束循环
+		if len(articles) < svc.batchSize {
+			break
+		}
+		// 文章的更新时间在7天外也结束循环
 		lastArt := articles[len(articles)-1]
-		if len(articles) < svc.batchSize || lastArt.UTime.Before(deadline) {
+		if lastArt.UTime.Before(deadline) {
 			break
 		}
 		offset += svc.length

@@ -50,15 +50,32 @@ func InitApp(templateId string) *App {
 	interactionRepository := repository.NewInteractionRepository(interactionDao, interactionCache)
 	batchReadEventConsumer := article.NewBatchReadEventConsumer(client, interactionRepository, loggerV2)
 	v2 := ioc.NewConsumers(batchReadEventConsumer)
+	articleDao := dao.NewArticleDao(db)
+	articleCache := cache.NewArticleCache(cmdable)
+	articleRepository := article2.NewArticleRepository(articleDao, articleCache, userRepository, loggerV2)
+	authorRepository := article2.NewArticleAuthorRepository()
+	readerRepository := article2.NewArticleReaderRepository()
+	syncProducer := ioc.NewSyncProducer(config)
+	producer := article.NewSyncProducer(syncProducer)
+	articleService := service.NewArticleService(articleRepository, authorRepository, readerRepository, producer, loggerV2)
+	interactionService := service.NewInteractionService(interactionRepository)
+	rankingCache := cache.NewRankingCache(cmdable)
+	rankingRepository := repository.NewRankingRepository(rankingCache)
+	rankingService := service.NewRankingService(articleService, interactionService, rankingRepository)
+	rankingJob := ioc.InitRankingJob(rankingService)
+	cron := ioc.InitCron(loggerV2, rankingJob)
 	app := &App{
 		server:    engine,
 		consumers: v2,
+		cron:      cron,
 	}
 	return app
 }
 
 // wire.go:
 
+var rankingSet = wire.NewSet(service.NewRankingService, repository.NewRankingRepository, cache.NewRankingCache)
+
 var (
-	providers = wire.NewSet(ioc.NewLogger, ioc.NewDB, ioc.NewRedis, ioc.InitMiddlewares, ioc.InitGin, ioc.InitSMSService, ioc.InitOAuth2Service, ioc.NewSaramaConfig, ioc.NewConsumerClient, article.NewBatchReadEventConsumer, ioc.NewConsumers, ioc.NewSyncProducer, article.NewSyncProducer, web.NewSMSHandler, web.NewUserHandler, web.NewOAuth2WechatHandler, web.NewJWTHandler, web.NewArticleHandler, web.NewTestHandler, service.NewCodeService, service.NewUserService, service.NewArticleService, service.NewInteractionService, repository.NewInteractionRepository, repository.NewCodeRepository, repository.NewUserRepository, article2.NewArticleRepository, article2.NewArticleReaderRepository, article2.NewArticleAuthorRepository, dao.NewUserDao, dao.NewInteractionDao, dao.NewArticleDao, cache.NewArticleCache, cache.NewCodeCache, cache.NewUserCache, cache.NewInteractionCache, wire.Struct(new(App), "*"))
+	providers = wire.NewSet(ioc.NewLogger, ioc.NewDB, ioc.NewRedis, ioc.InitMiddlewares, ioc.InitGin, ioc.InitSMSService, ioc.InitOAuth2Service, rankingSet, ioc.InitRankingJob, ioc.InitCron, ioc.NewSaramaConfig, ioc.NewConsumerClient, article.NewBatchReadEventConsumer, ioc.NewConsumers, ioc.NewSyncProducer, article.NewSyncProducer, web.NewSMSHandler, web.NewUserHandler, web.NewOAuth2WechatHandler, web.NewJWTHandler, web.NewArticleHandler, web.NewTestHandler, service.NewCodeService, service.NewUserService, service.NewArticleService, service.NewInteractionService, repository.NewInteractionRepository, repository.NewCodeRepository, repository.NewUserRepository, article2.NewArticleRepository, article2.NewArticleReaderRepository, article2.NewArticleAuthorRepository, dao.NewUserDao, dao.NewInteractionDao, dao.NewArticleDao, cache.NewArticleCache, cache.NewCodeCache, cache.NewUserCache, cache.NewInteractionCache, wire.Struct(new(App), "*"))
 )

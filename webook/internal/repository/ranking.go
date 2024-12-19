@@ -17,6 +17,10 @@ func (c *cacheRankingRepository) Get(ctx context.Context) ([]domain.Article, err
 }
 
 func (c *cacheRankingRepository) ReplaceTopN(ctx context.Context, articles []domain.Article) error {
+	// 考虑只缓存榜单需要的字段
+	for i := 0; i < len(articles); i++ {
+		articles[i].Content = ""
+	}
 	return c.cache.Set(ctx, articles)
 }
 

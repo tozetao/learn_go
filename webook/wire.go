@@ -15,6 +15,12 @@ import (
 	"learn_go/webook/ioc"
 )
 
+var rankingSet = wire.NewSet(
+	service.NewRankingService,
+	repository.NewRankingRepository,
+	cache.NewRankingCache,
+)
+
 var (
 	providers = wire.NewSet(
 		// 第三方依赖
@@ -27,6 +33,10 @@ var (
 
 		ioc.InitSMSService,
 		ioc.InitOAuth2Service,
+
+		rankingSet,
+		ioc.InitRankingJob,
+		ioc.InitCron,
 
 		// 消费者
 		ioc.NewSaramaConfig,

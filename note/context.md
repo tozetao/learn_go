@@ -56,11 +56,3 @@ context的实例之间存在父子关系：
 
 
 
-example:
-
-```go
-context.WithValue(context.Background(), "key1", "value1")
-```
-
-
-

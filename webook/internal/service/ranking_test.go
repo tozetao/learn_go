@@ -1,10 +1,12 @@
 package service
 
 import (
+	"context"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/mock/gomock"
 	"learn_go/webook/internal/domain"
 	svcmocks "learn_go/webook/internal/service/mocks"
+	"math"
 	"testing"
 	"time"
 )
@@ -63,8 +65,17 @@ func TestRankingService(t *testing.T) {
 
 		artSvc, interSvc := testCase.mock(ctrl)
 
-		rankingSvc := NewRankingService(artSvc, interSvc)
-		result, err := rankingSvc.topN()
+		rankingSvc := rankingService{
+			batchSize: 500,
+			length:    10,
+			artSvc:    artSvc,
+			interSvc:  interSvc,
+			scoreFn: func(utime time.Time, likes int64) float64 {
+				duration := time.Since(utime).Seconds()
+				return float64(likes-1) / math.Pow(duration+2, 1.5)
+			},
+		}
+		result, err := rankingSvc.topN(context.Background())
 		assert.Equal(t, testCase.wantErr, err)
 		assert.Equal(t, testCase.wantResult, result)
 	}

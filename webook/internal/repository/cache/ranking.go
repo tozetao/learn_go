@@ -29,13 +29,8 @@ func (c *rankingCache) key() string {
 }
 
 func (c *rankingCache) Set(ctx context.Context, articles []domain.Article) error {
-	// 这里其实你可以只存储Article必要的字段的，比如内容址类的可以不存储
-	res := make([]domain.Article, len(articles))
-	for _, article := range articles {
-		article.Content = ""
-		res = append(res, article)
-	}
-	data, err := json.Marshal(res)
+	// 这里可以按 id => article 预加载单篇文章数据。分布式环境下，可以考虑给其他进程发送通知，让其他实例也缓存数据。
+	data, err := json.Marshal(articles)
 	if err != nil {
 		return err
 	}

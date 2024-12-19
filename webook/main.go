@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"github.com/gin-gonic/gin"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
@@ -8,6 +9,7 @@ import (
 	_ "github.com/spf13/viper/remote"
 	"go.uber.org/zap"
 	"net/http"
+	"time"
 )
 
 func main() {
@@ -24,6 +26,9 @@ func main() {
 		}
 	}
 
+	// 启动定时任务
+	app.cron.Start()
+
 	// 启动监控服务
 	initPrometheus()
 
@@ -32,6 +37,17 @@ func main() {
 		context.String(http.StatusOK, "hello world")
 	})
 	app.server.Run(":9130")
+
+	// 等web服务器关闭后，再关系其他服务
+	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
+	defer cancel()
+
+	select {
+	case <-ctx.Done():
+	// 有任务长时间执行，超时关闭
+	case <-app.cron.Stop().Done():
+		//	job都执行结束，正常关闭
+	}
 }
 
 func InitConfig() {

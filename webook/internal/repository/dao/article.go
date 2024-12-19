@@ -66,7 +66,7 @@ func (dao *ArticleGORMDao) ListPub(ctx context.Context, start time.Time, offset 
 	var articles []Article
 
 	err := dao.db.WithContext(ctx).Model(&Article{}).
-		Where("start < ? and status = ?", start.UnixMilli(), ArticleStatusPublished).
+		Where("c_time < ? and status = ?", start.UnixMilli(), ArticleStatusPublished).
 		Offset(offset).
 		Limit(limit).
 		Find(&articles).Error

@@ -1,12 +1,12 @@
 package job
 
 import (
-	"github.com/prometheus/client_golang/prometheus"
-	"github.com/robfig/cron/v3"
-	"learn_go/webook/pkg/logger"
-	"strconv"
+	"context"
+	"learn_go/webook/internal/service"
 	"time"
 )
+
+// 1. 先实现自己定义的job接口。2.将自定义job转成cron job 3. 创建cron对象，加入所有创建的job
 
 // Job 任务接口
 type Job interface {
@@ -14,44 +14,22 @@ type Job interface {
 	Run() error
 }
 
-// 构建cron对象，同时利用适配器，监控任务的性能
-
-type jobAdapterFunc func()
-
-func (fn jobAdapterFunc) Run() {
-	fn()
+// RankingJob 排行榜任务
+type RankingJob struct {
+	rankingSvc service.RankingService
+	duration   time.Duration
 }
 
-type CronJob struct {
-	l   logger.LoggerV2
-	vec *prometheus.SummaryVec
+func NewRankingJob(rankingSvc service.RankingService, duration time.Duration) *RankingJob {
+	return &RankingJob{rankingSvc: rankingSvc, duration: duration}
 }
 
-// Build 构建cron job对象
-func (c *CronJob) Build(job Job) cron.Job {
-	return jobAdapterFunc(func() {
-		now := time.Now()
-
-		err := job.Run()
-
-		c.vec.WithLabelValues(job.Name(), strconv.FormatBool(err == nil)).
-			Observe(float64(time.Since(now).Milliseconds()))
-	})
+func (r *RankingJob) Name() string {
+	return "ranking"
 }
 
-func NewCronJob(l logger.LoggerV2) *CronJob {
-	return &CronJob{
-		l: l,
-		vec: prometheus.NewSummaryVec(prometheus.SummaryOpts{
-			Namespace: "go_project",
-			Subsystem: "webook",
-			Name:      "cron_job",
-			Help:      "定时任务的性能检测",
-			Objectives: map[float64]float64{
-				0.5:  0.01,
-				0.95: 0.01,
-				0.99: 0.005,
-			},
-		}, []string{"job_name", "success"}),
-	}
+func (r *RankingJob) Run() error {
+	ctx, cancel := context.WithTimeout(context.Background(), r.duration)
+	defer cancel()
+	return r.rankingSvc.TopN(ctx)
 }
