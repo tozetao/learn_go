@@ -5,8 +5,8 @@ https://gitee.com/geektime-geekbang_admin/geektime-basic-go
 #### 进度
 
 ```
-完成榜单模型的计算
 完成可观测性章节的代码
+分布式任务
 ```
 
 
@@ -53,9 +53,7 @@ git checkout -b install v.x.x
 
 
 
-资源：
 
-https://github.com/ecodeclub/ekit
 
 
 
@@ -76,4 +74,12 @@ https://github.com/ecodeclub/ekit
 - 添加、删除、查找、过滤、Map Reduce。
 - 集合运算：交集、并集、差集
 ````
+
+
+
+### URL
+
+```
+https://github.com/ecodeclub/ekit
+```
 

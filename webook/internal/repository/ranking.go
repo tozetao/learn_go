@@ -13,7 +13,7 @@ type RankingRepository interface {
 }
 
 func (c *cacheRankingRepository) Get(ctx context.Context) ([]domain.Article, error) {
-	return c.cache.Get(ctx)
+	return c.redisCache.Get(ctx)
 }
 
 func (c *cacheRankingRepository) ReplaceTopN(ctx context.Context, articles []domain.Article) error {
@@ -21,15 +21,41 @@ func (c *cacheRankingRepository) ReplaceTopN(ctx context.Context, articles []dom
 	for i := 0; i < len(articles); i++ {
 		articles[i].Content = ""
 	}
-	return c.cache.Set(ctx, articles)
+	return c.redisCache.Set(ctx, articles)
 }
 
-func NewRankingRepository(cache cache.RankingCache) RankingRepository {
+func (c *cacheRankingRepository) GetV1(ctx context.Context) ([]domain.Article, error) {
+	arts, err := c.localCache.Get(ctx)
+	if err == nil {
+		return arts, nil
+	}
+	arts, err = c.redisCache.Get(ctx)
+	if err != nil {
+		// redis不可用。注：这里没有区分错误，err可能是redis.Nil
+		return c.localCache.ForceGet(ctx)
+	}
+	_ = c.localCache.Set(ctx, arts)
+	return arts, nil
+}
+
+func (c *cacheRankingRepository) ReplaceTopNV1(ctx context.Context, articles []domain.Article) error {
+	// 考虑只缓存榜单需要的字段
+	for i := 0; i < len(articles); i++ {
+		articles[i].Content = ""
+	}
+	_ = c.localCache.Set(ctx, articles)
+	return c.redisCache.Set(ctx, articles)
+}
+
+func NewRankingRepository(redisCache *cache.RedisRanking, localCache *cache.LocalCacheRanking) RankingRepository {
 	return &cacheRankingRepository{
-		cache: cache,
+		redisCache: redisCache,
+		localCache: localCache,
 	}
 }
 
 type cacheRankingRepository struct {
-	cache cache.RankingCache
+	//cache cache.RankingCache
+	redisCache *cache.RedisRanking
+	localCache *cache.LocalCacheRanking
 }
