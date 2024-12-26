@@ -18,14 +18,29 @@ type MangoDBArticleDao struct {
 	node            *snowflake.Node
 }
 
-//func NewMongoArticleDao(db *mongo.Database, node *snowflake.Node) ArticleDao {
-//	return &MangoDBArticleDao{
-//		db:              db,
-//		artCol:          db.Collection("articles"),
-//		publishedArtCol: db.Collection("published_articles"),
-//		node:            node,
-//	}
-//}
+func (dao *MangoDBArticleDao) GetByID(ctx context.Context, id int64) (Article, error) {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (dao *MangoDBArticleDao) ListPub(ctx context.Context, start time.Time, offset int, limit int) ([]Article, error) {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (dao *MangoDBArticleDao) GetPubByID(ctx context.Context, id int64) (PublishArticle, error) {
+	//TODO implement me
+	panic("implement me")
+}
+
+func NewMongoArticleDao(db *mongo.Database, node *snowflake.Node) ArticleDao {
+	return &MangoDBArticleDao{
+		db:              db,
+		artCol:          db.Collection("articles"),
+		publishedArtCol: db.Collection("published_articles"),
+		node:            node,
+	}
+}
 
 func (dao *MangoDBArticleDao) GetByAuthor(ctx context.Context, uid int64, offset int, limit int) ([]Article, error) {
 	panic("implement me")

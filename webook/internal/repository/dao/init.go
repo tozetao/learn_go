@@ -10,5 +10,6 @@ func InitTable(db *gorm.DB) error {
 		&Interaction{},
 		&UserLike{},
 		&UserFavorite{},
+		&Job{},
 	)
 }

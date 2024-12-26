@@ -6,6 +6,8 @@ package startup
 import (
 	"github.com/gin-gonic/gin"
 	"github.com/google/wire"
+	event "learn_go/webook/internal/event/article"
+	"learn_go/webook/internal/job"
 	"learn_go/webook/internal/repository"
 	"learn_go/webook/internal/repository/article"
 	"learn_go/webook/internal/repository/cache"
@@ -45,33 +47,85 @@ var (
 	)
 
 	articleProviders = wire.NewSet(
-		ioc.NewLogger,
 		NewDB,
 		NewRedis,
-		dao.NewArticleDao,
-		cache.NewArticleCache,
+		ioc.NewLogger,
+
+		// 消费者
+		ioc.NewSaramaConfig,
+		ioc.NewConsumerClient,
+		//event.NewConsumer,
+		event.NewBatchReadEventConsumer,
+		ioc.NewConsumers,
+		// 生产者
+		ioc.NewSyncProducer,
+		event.NewSyncProducer,
+
+		web.NewArticleHandler,
+		service.NewArticleService,
+		service.NewInteractionService,
+
+		repository.NewInteractionRepository,
+		dao.NewInteractionDao,
+		cache.NewInteractionCache,
 
 		article.NewArticleRepository,
+
+		dao.NewArticleDao,
+		cache.NewArticleCache,
+		repository.NewUserRepository,
+
+		dao.NewUserDao,
+		cache.NewUserCache,
+
 		article.NewArticleAuthorRepository,
 		article.NewArticleReaderRepository,
-
-		service.NewArticleService,
-		web.NewArticleHandler,
 	)
 
 	articleProvidersV1 = wire.NewSet(
 		NewDB,
 		NewRedis,
-		NewMangoDB,
 		ioc.NewLogger,
 
-		cache.NewArticleCache,
-		article.NewArticleRepository,
-		article.NewArticleAuthorRepository,
-		article.NewArticleReaderRepository,
+		// 消费者
+		ioc.NewSaramaConfig,
+		ioc.NewConsumerClient,
+		//event.NewConsumer,
+		event.NewBatchReadEventConsumer,
+		ioc.NewConsumers,
+		// 生产者
+		ioc.NewSyncProducer,
+		event.NewSyncProducer,
 
 		web.NewArticleHandler,
 		service.NewArticleService,
+		service.NewInteractionService,
+
+		repository.NewInteractionRepository,
+		dao.NewInteractionDao,
+		cache.NewInteractionCache,
+
+		article.NewArticleRepository,
+
+		cache.NewArticleCache,
+		repository.NewUserRepository,
+
+		dao.NewUserDao,
+		cache.NewUserCache,
+
+		article.NewArticleAuthorRepository,
+		article.NewArticleReaderRepository,
+	)
+
+	schedulerProvider = wire.NewSet(
+		NewDB,
+		NewRedis,
+		ioc.NewLogger,
+
+		job.NewScheduler,
+		service.NewJobService,
+		repository.NewCronJobRepository,
+		dao.NewJobDao,
 	)
 )
 
@@ -88,4 +142,9 @@ func InitArticleHandlerV1(articleDao dao.ArticleDao) *web.ArticleHandler {
 func InitWebServer(templateId string) *gin.Engine {
 	wire.Build(providers)
 	return gin.Default()
+}
+
+func InitScheduler() *job.Scheduler {
+	wire.Build(schedulerProvider)
+	return new(job.Scheduler)
 }

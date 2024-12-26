@@ -54,3 +54,13 @@ func TestMap(t *testing.T) {
 	job4, exists := m[4]
 	fmt.Printf("job3: %v, exists: %v\n", job4.ID, exists)
 }
+
+func TestCron2(t *testing.T) {
+	c := cron.New(cron.WithSeconds())
+	c.AddFunc("*/5 * * * * ?", func() {
+		fmt.Println(time.Now().Format(time.DateTime))
+	})
+	c.Start()
+
+	time.Sleep(time.Second * 30)
+}
