@@ -25,9 +25,9 @@ type Job struct {
 	// cron表达式
 	Expression string
 
-	Status int8 `json:"status" gorm:"index:status_next_time,unique"`
+	Status int8 `json:"status" gorm:"column:status;index:status_next_time"`
 	// 下一次执行的时间
-	NextTime int64 `json:"next_time" gorm:"column:next_time,index:status_next_time,unique"`
+	NextTime int64 `json:"next_time" gorm:"column:next_time;index:status_next_time"`
 
 	Version string
 
@@ -73,10 +73,11 @@ func (dao *jobDao) Preempt(ctx context.Context) (Job, error) {
 		err := dao.db.WithContext(ctx).Model(&Job{}).
 			Where("status = ? and next_time < ?", jobStatusWaiting, now.UnixMilli()).
 			First(&job).Error
+		// 发生错误 或者 找不到job就返回
 		if err != nil {
 			return Job{}, err
 		}
-		// 利用锁，从waiting变为running状态，保证只有一个实例抢占到该任务。
+		// 利用锁，将job从waiting变为running状态，保证只有一个实例抢占到该任务。
 		res := dao.db.WithContext(ctx).Model(&Job{}).
 			Where("id = ? and status = ?", job.ID, jobStatusWaiting).
 			Updates(map[string]interface{}{

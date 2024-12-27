@@ -2,11 +2,13 @@ https://gitee.com/geektime-geekbang_admin/geektime-basic-go
 
 
 
-#### 进度
+
 
 ```
+TODO
+
 完成可观测性章节的代码
-分布式任务
+rpc实现?
 ```
 
 
@@ -31,7 +33,8 @@ git checkout -b install v.x.x
 ````
 
 
-### kafka相关
+kafka相关
+------------------------------------------
 - 怎么知道一个消费者组中有多少个消费者，每个消费者在消费主题的哪个分区？
 - 测试kafka分片消费消息的顺序
 
@@ -55,8 +58,8 @@ git checkout -b install v.x.x
 
 
 
-
-
+简单的数据结构与算法
+------------------------------------------
 目标：
 基础：切片的辅助方法、map的辅助方法，用内置map封装一个set
 中级：设计List、普通队列、HashMap

@@ -26,6 +26,8 @@ type Job struct {
 	// Job所属执行器的名字
 	Executor string
 
+	Nt time.Time
+
 	// cron表达式
 	Expression string
 

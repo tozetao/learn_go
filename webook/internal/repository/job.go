@@ -41,6 +41,7 @@ func (repo *CronJobRepository) Preempt(ctx context.Context) (domain.Job, error) 
 		Cfg:        j.Cfg,
 		Executor:   j.Executor,
 		Expression: j.Expression,
+		Nt:         time.UnixMilli(j.NextTime),
 	}, err
 }
 

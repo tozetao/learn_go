@@ -84,7 +84,7 @@ func TestJob1(t *testing.T) {
 		Name:     "test_job",
 		Executor: "executor:local",
 
-		Expression: "*/10 * * * * ?",
+		Expression: "*/5 * * * * ?",
 		Status:     1,
 		Cfg:        "this is a test job",
 		CTime:      now.UnixMilli(),
@@ -108,9 +108,7 @@ func TestJob2(t *testing.T) {
 	scheduler.Register(executor.Name(), executor)
 
 	// 开始执行
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
+	defer cancel()
 	scheduler.Schedule(ctx)
-
-	time.Sleep(1 * time.Minute)
-	cancel()
 }

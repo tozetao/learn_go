@@ -83,6 +83,8 @@ func (s *Scheduler) Schedule(ctx context.Context) {
 		j, err := s.svc.Preempt(dbCtx)
 		cancel()
 		if err != nil {
+			s.l.Info("抢占不到任务", logger.Error(err))
+			time.Sleep(time.Second)
 			continue
 		}
 
@@ -90,29 +92,34 @@ func (s *Scheduler) Schedule(ctx context.Context) {
 		executor, ok := s.executors[j.Executor]
 		if !ok {
 			s.l.Error("找不到Executor", logger.Int64("job id", j.ID), logger.String("executor", j.Executor))
+			time.Sleep(time.Second)
 			continue
 		}
+		s.l.Info("开始执行任务", logger.Int64("job id", j.ID), logger.String("next_time", j.Nt.Format(time.DateTime)))
 
 		// 执行该任务
+		// TODO: 外部不知道任务是否执行完毕。因为目前开启一个goroutine来执行job，通过context设置goroutine的最大执行时间。
 		go func() {
 			execCtx, cancel := context.WithTimeout(context.Background(), s.jobDuration)
-			defer cancel()
+			defer func() {
+				s.l.Info("任务执行完毕")
+				cancel()
+				j.CancelFunc()
+			}()
 
 			err := executor.Exec(execCtx, j)
 			if err != nil {
 				s.l.Error("job执行失败", logger.Int64("job id", j.ID), logger.Error(err))
-
 			}
 
-			//// 释放job，重置job的执行时间
-			//j.CancelFunc()
-			//err = s.svc.ResetNextTime(, j)
-			//if err != nil {
-			//	s.l.Error("重置job执行时间失败", logger.Int64("job id", j.ID), logger.Error(err))
-			//}
+			// 重置job的执行时间
+			err = s.svc.ResetNextTime(execCtx, j)
+			if err != nil {
+				s.l.Error("重置job执行时间失败", logger.Int64("job id", j.ID), logger.Error(err))
+			}
 		}()
 
-		// 这个循环对mysql压力太大了，我觉得应该要间隔的去抢占任务
-		time.Sleep(time.Second)
+		time.Sleep(time.Millisecond * 500)
 	}
+
 }
