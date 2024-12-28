@@ -117,7 +117,7 @@ func TestArticleHandler_Edit(t *testing.T) {
 			})
 
 			articleSvc := testCase.mock(ctrl)
-			articleHandler := NewArticleHandler(articleSvc, logger.NewNopLogger())
+			articleHandler := NewArticleHandler(articleSvc, nil, logger.NewNopLogger())
 			articleHandler.RegisterRoutes(server)
 
 			// 构建请求

@@ -1,0 +1,55 @@
+syntax = "proto3";
+
+option go_package = "learn_go/grpc";
+
+message User {
+  int64 id = 1;
+  string name = 2;
+  string avatar = 4;
+
+  // map
+  map<string, string> attributes = 5;
+  // 数组
+  repeated string nicknames = 6;
+  // 可选的？
+  optional int32 age = 7;
+
+  Address address = 8;
+
+  oneof contacts {
+    string email = 10;
+    string phone = 11;
+  }
+
+  Gender gender = 12;
+}
+
+message Address {
+  string province = 1;
+  string city = 2;
+}
+
+enum Gender {
+  Unknown = 0;
+  Female = 1;
+  Male = 2;
+}
+
+
+// protobuf是数据序列化协议，用于平台通信、数据存储和rpc等领域。
+
+// grpc idl（接口描述语言）
+// idl是接口描述语言，用于描述软件接口的一种计算机语言，与语言、平台无关。通过定义好的idl可以生成各个语言的代码。
+// grpc选中protobuf来做自己的idl语言。
+
+service UserService {
+  rpc GetById(GetByIdReq) returns (GetByIdResp);
+}
+
+message GetByIdReq {
+  int64 id = 1;
+}
+
+message GetByIdResp {
+  User user = 1;
+}
