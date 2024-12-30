@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: webook-redis
+spec:
+  selector:
+    app: webook-redis
+  ports:
+    - protocol: TCP
+      port: 14001
+      targetPort: 6379
+      nodePort: 30010
+  type: NodePort

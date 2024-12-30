@@ -1,0 +1,29 @@
+apiVersion: apps/v1
+# 表示声明的是Deployment
+kind: Deployment
+metadata:
+  # deployment的命名
+  name: webook
+
+# 规格说明（Pod的规格说明?）
+spec:
+  # 副本数量
+  replicas: 1
+  # deployment通过标识来寻找Pod。selector定义了Deployment如何寻找Pod。
+  selector:
+    matchLabels:
+      app: webook
+  # 描述POD
+  template:
+    metadata:
+      # 标签：按照标签寻找资源。（可以理解成Pod的标识）
+      labels:
+        app: webook
+    # Pod所包含的容器信息。可以看到containers是一个数组，也就是前面说的一个Pod可以包含多个容器。
+    spec:
+      containers:
+        - name: webook
+          image: flycash/webook:v0.0.1
+          # 对外暴露的端口
+          ports:
+            - containerPort: 8200
