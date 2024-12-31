@@ -4,6 +4,7 @@ import (
 	"errors"
 	"github.com/ecodeclub/ekit/slice"
 	"github.com/gin-gonic/gin"
+	service2 "learn_go/webook/interaction/service"
 	"learn_go/webook/internal/domain"
 	"learn_go/webook/internal/service"
 	"learn_go/webook/pkg/ginx"
@@ -16,12 +17,12 @@ import (
 type ArticleHandler struct {
 	log      logger.LoggerV2
 	svc      service.ArticleService
-	interSvc service.InteractionService
+	interSvc service2.InteractionService
 
 	biz string
 }
 
-func NewArticleHandler(svc service.ArticleService, interSvc service.InteractionService, l logger.LoggerV2) *ArticleHandler {
+func NewArticleHandler(svc service.ArticleService, interSvc service2.InteractionService, l logger.LoggerV2) *ArticleHandler {
 	return &ArticleHandler{
 		log:      l,
 		svc:      svc,

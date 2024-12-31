@@ -1,0 +1,120 @@
+syntax = "proto3";
+
+package intr.v1;
+
+option go_package = "learn_go/webook/api/proto/gen/intr;intrv1";
+
+// 在当前目录执行:
+// protoc --go_out=../../gen/intr --go_opt=paths=source_relative --go-grpc_out=../../gen/intr --go-grpc_opt=paths=source_relative *.proto
+// go_out: 存放proto编译后的go代码的目录
+// go-grpc_out：存放proto编译后的grpc代码
+
+service InteractionService {
+    rpc View(ViewReq) returns (ViewResp);
+
+    rpc Like(LikeReq) returns (LikeResp);
+    rpc CancelLike(CancelLikeReq) returns (CancelLikeResp);
+
+    rpc Favorite(FavoriteReq) returns(FavoriteResp);
+
+  // Get 查询bizID的交互数据，以及用户id（uid）对应的交互数据
+    rpc Get(GetReq) returns (GetResp);
+
+  // Liked 用户是否点赞
+  rpc Liked(LikedReq) returns (LikedResp);
+
+  // Collected 用户是否收藏
+  rpc Collected(CollectedReq) returns (CollectedResp);
+
+  rpc GetByIDs(GetByIDsReq) returns (GetByIDsResp);
+}
+
+message GetByIDsReq {
+//  ctx context.Context, biz string, bizIDs []int64
+  string biz = 1;
+  repeated int64 biz_ids = 2;
+}
+
+message GetByIDsResp {
+  map<int64, Interaction> inters = 1;
+}
+
+message CollectedReq {
+//  ctx context.Context, uid int64, biz string, bizID int64
+  int64 uid = 1;
+  string biz = 2;
+  int64 biz_id = 3;
+}
+
+message CollectedResp {
+  bool collected = 1;
+}
+
+message LikedReq {
+//  ctx context.Context, uid int64, biz string, bizID int64
+  int64 uid = 1;
+  string biz = 2;
+  int64 biz_id = 3;
+}
+message LikedResp {
+  bool liked = 1;
+}
+
+message GetReq {
+//  ctx context.Context, uid int64, biz string, bizID int64
+  int64 uid = 1;
+  string biz = 2;
+  int64 biz_id = 3;
+}
+
+message GetResp {
+  Interaction inter = 1;
+}
+
+message Interaction{
+  int64 id = 1;
+  string biz = 2;
+  int64 biz_id = 3;
+  int64 c_time = 4;
+  int64 u_time = 5;
+  int64 views = 6;
+  int64 likes = 7;
+  int64 favorites = 8;
+  bool liked = 9;
+  bool collected = 10;
+
+}
+
+message FavoriteReq {
+//  ctx context.Context, uid int64, favoriteID int64, biz string, bizID int64
+  int64 uid = 1;
+  int64 favorite_id = 2;
+  string biz = 3;
+  int64 biz_id = 4;
+}
+
+message FavoriteResp{}
+
+message CancelLikeReq {
+  int64 uid = 1;
+  string biz = 2;
+  int64 biz_id = 3;
+}
+
+message CancelLikeResp {}
+
+message LikeReq {
+    int64 uid = 1;
+    string biz = 2;
+    int64 biz_id = 3;
+}
+
+message LikeResp {}
+
+message ViewReq {
+  string biz = 1;
+  int64 biz_id = 2;
+}
+
+message ViewResp {
+}

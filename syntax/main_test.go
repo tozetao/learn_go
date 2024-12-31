@@ -6,6 +6,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
+	"strconv"
 	"testing"
 	"time"
 )
@@ -94,4 +95,11 @@ func TestSnowFlake(t *testing.T) {
 	}
 	id := node.Generate()
 	fmt.Printf("id: %d\n", id)
+}
+
+func TestParseInt(t *testing.T) {
+	str := ""
+	n, err := strconv.ParseInt(str, 10, 64)
+	t.Log(err)
+	t.Log(n)
 }

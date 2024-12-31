@@ -3,8 +3,8 @@ package startup
 import (
 	"github.com/IBM/sarama"
 	"github.com/spf13/viper"
+	event2 "learn_go/webook/interaction/event/article"
 	"learn_go/webook/internal/event"
-	"learn_go/webook/internal/event/article"
 )
 
 func NewSaramaConfig() *sarama.Config {
@@ -35,7 +35,7 @@ func NewConsumerClient(saramaCfg *sarama.Config) sarama.Client {
 	return client
 }
 
-func NewConsumers(articleEventConsumer *article.BatchReadEventConsumer) []event.Consumer {
+func NewConsumers(articleEventConsumer *event2.BatchReadEventConsumer) []event.Consumer {
 	return []event.Consumer{articleEventConsumer}
 }
 

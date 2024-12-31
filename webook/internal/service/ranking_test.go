@@ -4,6 +4,8 @@ import (
 	"context"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/mock/gomock"
+	domain2 "learn_go/webook/interaction/domain"
+	service2 "learn_go/webook/interaction/service"
 	"learn_go/webook/internal/domain"
 	svcmocks "learn_go/webook/internal/service/mocks"
 	"math"
@@ -23,7 +25,7 @@ func TestRankingService(t *testing.T) {
 		// 输入
 
 		// mock的服务
-		mock func(controller *gomock.Controller) (ArticleService, InteractionService)
+		mock func(controller *gomock.Controller) (ArticleService, service2.InteractionService)
 
 		// 期待的输出
 		wantErr    error
@@ -31,7 +33,7 @@ func TestRankingService(t *testing.T) {
 	}{
 		{
 			Name: "测试榜单名次",
-			mock: func(controller *gomock.Controller) (ArticleService, InteractionService) {
+			mock: func(controller *gomock.Controller) (ArticleService, service2.InteractionService) {
 				artSvc := svcmocks.NewMockArticleService(controller)
 				interSvc := svcmocks.NewMockInteractionService(controller)
 
@@ -43,7 +45,7 @@ func TestRankingService(t *testing.T) {
 					}, nil)
 
 				interSvc.EXPECT().GetByIDs(gomock.Any(), "article", []int64{1, 2, 3}).
-					Return(map[int64]domain.Interaction{
+					Return(map[int64]domain2.Interaction{
 						1: {ID: 101, Biz: "article", BizID: 1, Likes: 1},
 						2: {ID: 102, Biz: "article", BizID: 2, Likes: 2},
 						3: {ID: 103, Biz: "article", BizID: 3, Likes: 3},

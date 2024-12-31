@@ -5,6 +5,10 @@ package main
 
 import (
 	"github.com/google/wire"
+	repository2 "learn_go/webook/interaction/repository"
+	cache2 "learn_go/webook/interaction/repository/cache"
+	dao2 "learn_go/webook/interaction/repository/dao"
+	service2 "learn_go/webook/interaction/service"
 	event "learn_go/webook/internal/event/article"
 	"learn_go/webook/internal/repository"
 	"learn_go/webook/internal/repository/article"
@@ -40,10 +44,7 @@ var (
 
 		// 消费者
 		ioc.NewSaramaConfig,
-		ioc.NewConsumerClient,
-		//event.NewConsumer,
-		event.NewBatchReadEventConsumer,
-		ioc.NewConsumers,
+
 		// 生产者
 		ioc.NewSyncProducer,
 		event.NewSyncProducer,
@@ -58,9 +59,9 @@ var (
 		service.NewCodeService,
 		service.NewUserService,
 		service.NewArticleService,
-		service.NewInteractionService,
+		service2.NewInteractionService,
 
-		repository.NewInteractionRepository,
+		repository2.NewInteractionRepository,
 		repository.NewCodeRepository,
 		repository.NewUserRepository,
 		article.NewArticleRepository,
@@ -68,13 +69,13 @@ var (
 		article.NewArticleAuthorRepository,
 
 		dao.NewUserDao,
-		dao.NewInteractionDao,
+		dao2.NewInteractionDao,
 		dao.NewArticleDao,
 
 		cache.NewArticleCache,
 		cache.NewCodeCache,
 		cache.NewUserCache,
-		cache.NewInteractionCache,
+		cache2.NewInteractionCache,
 
 		wire.Struct(new(App), "*"),
 	)

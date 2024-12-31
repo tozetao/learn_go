@@ -16,6 +16,23 @@ rpc实现?
 
 
 
+
+
+```
+protoc --go_out=../../gen/intr --go_opt=paths=source_relative --go-grpc_out=../../gen/intr --go-grpc_opt=paths=source_relative *.proto
+
+protoc --go_out=. --go_opt=paths=source_relative --go-grpc_out=. --go-rpc_opt=paths=source_relative  *.proto
+
+go_out: 存放proto编译后的go代码的目录
+go-grpc_out：存放proto编译后的grpc代码
+```
+
+
+
+
+
+
+
 #### 提示
 
 安装go包的可执行文件

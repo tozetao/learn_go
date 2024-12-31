@@ -4,6 +4,7 @@ import (
 	"context"
 	"github.com/ecodeclub/ekit/queue"
 	"github.com/ecodeclub/ekit/slice"
+	service2 "learn_go/webook/interaction/service"
 	"learn_go/webook/internal/domain"
 	"learn_go/webook/internal/repository"
 	"math"
@@ -66,7 +67,7 @@ type rankingService struct {
 	// 榜单长度
 	length int
 
-	interSvc InteractionService
+	interSvc service2.InteractionService
 	artSvc   ArticleService
 
 	// 计算分数的函数
@@ -80,7 +81,7 @@ type node struct {
 
 func NewRankingService(
 	artSvc ArticleService,
-	interSvc InteractionService,
+	interSvc service2.InteractionService,
 	repo repository.RankingRepository) RankingService {
 	svc := &rankingService{
 		repo:      repo,

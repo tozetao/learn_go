@@ -6,6 +6,11 @@ package startup
 import (
 	"github.com/gin-gonic/gin"
 	"github.com/google/wire"
+	event2 "learn_go/webook/interaction/event/article"
+	repository2 "learn_go/webook/interaction/repository"
+	cache2 "learn_go/webook/interaction/repository/cache"
+	dao2 "learn_go/webook/interaction/repository/dao"
+	service2 "learn_go/webook/interaction/service"
 	event "learn_go/webook/internal/event/article"
 	"learn_go/webook/internal/job"
 	"learn_go/webook/internal/repository"
@@ -55,7 +60,7 @@ var (
 		ioc.NewSaramaConfig,
 		ioc.NewConsumerClient,
 		//event.NewConsumer,
-		event.NewBatchReadEventConsumer,
+		event2.NewBatchReadEventConsumer,
 		ioc.NewConsumers,
 		// 生产者
 		ioc.NewSyncProducer,
@@ -63,11 +68,11 @@ var (
 
 		web.NewArticleHandler,
 		service.NewArticleService,
-		service.NewInteractionService,
+		service2.NewInteractionService,
 
-		repository.NewInteractionRepository,
-		dao.NewInteractionDao,
-		cache.NewInteractionCache,
+		repository2.NewInteractionRepository,
+		dao2.NewInteractionDao,
+		cache2.NewInteractionCache,
 
 		article.NewArticleRepository,
 
@@ -91,7 +96,7 @@ var (
 		ioc.NewSaramaConfig,
 		ioc.NewConsumerClient,
 		//event.NewConsumer,
-		event.NewBatchReadEventConsumer,
+		event2.NewBatchReadEventConsumer,
 		ioc.NewConsumers,
 		// 生产者
 		ioc.NewSyncProducer,
@@ -99,11 +104,11 @@ var (
 
 		web.NewArticleHandler,
 		service.NewArticleService,
-		service.NewInteractionService,
+		service2.NewInteractionService,
 
-		repository.NewInteractionRepository,
-		dao.NewInteractionDao,
-		cache.NewInteractionCache,
+		repository2.NewInteractionRepository,
+		dao2.NewInteractionDao,
+		cache2.NewInteractionCache,
 
 		article.NewArticleRepository,
 

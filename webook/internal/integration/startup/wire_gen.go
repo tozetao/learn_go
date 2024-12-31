@@ -9,6 +9,11 @@ package startup
 import (
 	"github.com/gin-gonic/gin"
 	"github.com/google/wire"
+	article3 "learn_go/webook/interaction/event/article"
+	repository2 "learn_go/webook/interaction/repository"
+	cache2 "learn_go/webook/interaction/repository/cache"
+	dao2 "learn_go/webook/interaction/repository/dao"
+	service2 "learn_go/webook/interaction/service"
 	article2 "learn_go/webook/internal/event/article"
 	"learn_go/webook/internal/job"
 	"learn_go/webook/internal/repository"
@@ -38,10 +43,10 @@ func InitArticleHandler() *web.ArticleHandler {
 	syncProducer := ioc.NewSyncProducer(config)
 	producer := article2.NewSyncProducer(syncProducer)
 	articleService := service.NewArticleService(articleRepository, authorRepository, readerRepository, producer, loggerV2)
-	interactionDao := dao.NewInteractionDao(db)
-	interactionCache := cache.NewInteractionCache(cmdable)
-	interactionRepository := repository.NewInteractionRepository(interactionDao, interactionCache)
-	interactionService := service.NewInteractionService(interactionRepository)
+	interactionDao := dao2.NewInteractionDao(db)
+	interactionCache := cache2.NewInteractionCache(cmdable)
+	interactionRepository := repository2.NewInteractionRepository(interactionDao, interactionCache)
+	interactionService := service2.NewInteractionService(interactionRepository)
 	articleHandler := web.NewArticleHandler(articleService, interactionService, loggerV2)
 	return articleHandler
 }
@@ -61,10 +66,10 @@ func InitArticleHandlerV1(articleDao dao.ArticleDao) *web.ArticleHandler {
 	syncProducer := ioc.NewSyncProducer(config)
 	producer := article2.NewSyncProducer(syncProducer)
 	articleService := service.NewArticleService(articleRepository, authorRepository, readerRepository, producer, loggerV2)
-	interactionDao := dao.NewInteractionDao(db)
-	interactionCache := cache.NewInteractionCache(cmdable)
-	interactionRepository := repository.NewInteractionRepository(interactionDao, interactionCache)
-	interactionService := service.NewInteractionService(interactionRepository)
+	interactionDao := dao2.NewInteractionDao(db)
+	interactionCache := cache2.NewInteractionCache(cmdable)
+	interactionRepository := repository2.NewInteractionRepository(interactionDao, interactionCache)
+	interactionService := service2.NewInteractionService(interactionRepository)
 	articleHandler := web.NewArticleHandler(articleService, interactionService, loggerV2)
 	return articleHandler
 }
@@ -110,12 +115,12 @@ var (
 
 	articleProviders = wire.NewSet(
 		NewDB,
-		NewRedis, ioc.NewLogger, ioc.NewSaramaConfig, ioc.NewConsumerClient, article2.NewBatchReadEventConsumer, ioc.NewConsumers, ioc.NewSyncProducer, article2.NewSyncProducer, web.NewArticleHandler, service.NewArticleService, service.NewInteractionService, repository.NewInteractionRepository, dao.NewInteractionDao, cache.NewInteractionCache, article.NewArticleRepository, dao.NewArticleDao, cache.NewArticleCache, repository.NewUserRepository, dao.NewUserDao, cache.NewUserCache, article.NewArticleAuthorRepository, article.NewArticleReaderRepository,
+		NewRedis, ioc.NewLogger, ioc.NewSaramaConfig, ioc.NewConsumerClient, article3.NewBatchReadEventConsumer, ioc.NewConsumers, ioc.NewSyncProducer, article2.NewSyncProducer, web.NewArticleHandler, service.NewArticleService, service2.NewInteractionService, repository2.NewInteractionRepository, dao2.NewInteractionDao, cache2.NewInteractionCache, article.NewArticleRepository, dao.NewArticleDao, cache.NewArticleCache, repository.NewUserRepository, dao.NewUserDao, cache.NewUserCache, article.NewArticleAuthorRepository, article.NewArticleReaderRepository,
 	)
 
 	articleProvidersV1 = wire.NewSet(
 		NewDB,
-		NewRedis, ioc.NewLogger, ioc.NewSaramaConfig, ioc.NewConsumerClient, article2.NewBatchReadEventConsumer, ioc.NewConsumers, ioc.NewSyncProducer, article2.NewSyncProducer, web.NewArticleHandler, service.NewArticleService, service.NewInteractionService, repository.NewInteractionRepository, dao.NewInteractionDao, cache.NewInteractionCache, article.NewArticleRepository, cache.NewArticleCache, repository.NewUserRepository, dao.NewUserDao, cache.NewUserCache, article.NewArticleAuthorRepository, article.NewArticleReaderRepository,
+		NewRedis, ioc.NewLogger, ioc.NewSaramaConfig, ioc.NewConsumerClient, article3.NewBatchReadEventConsumer, ioc.NewConsumers, ioc.NewSyncProducer, article2.NewSyncProducer, web.NewArticleHandler, service.NewArticleService, service2.NewInteractionService, repository2.NewInteractionRepository, dao2.NewInteractionDao, cache2.NewInteractionCache, article.NewArticleRepository, cache.NewArticleCache, repository.NewUserRepository, dao.NewUserDao, cache.NewUserCache, article.NewArticleAuthorRepository, article.NewArticleReaderRepository,
 	)
 
 	schedulerProvider = wire.NewSet(

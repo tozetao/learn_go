@@ -8,6 +8,11 @@ package main
 
 import (
 	"github.com/google/wire"
+	article3 "learn_go/webook/interaction/event/article"
+	repository2 "learn_go/webook/interaction/repository"
+	cache2 "learn_go/webook/interaction/repository/cache"
+	dao2 "learn_go/webook/interaction/repository/dao"
+	service2 "learn_go/webook/interaction/service"
 	"learn_go/webook/internal/event/article"
 	"learn_go/webook/internal/repository"
 	article2 "learn_go/webook/internal/repository/article"
@@ -45,10 +50,10 @@ func InitApp(templateId string) *App {
 	engine := ioc.InitGin(v, smsHandler, userHandler, oAuth2WechatHandler)
 	config := ioc.NewSaramaConfig()
 	client := ioc.NewConsumerClient(config)
-	interactionDao := dao.NewInteractionDao(db)
-	interactionCache := cache.NewInteractionCache(cmdable)
-	interactionRepository := repository.NewInteractionRepository(interactionDao, interactionCache)
-	batchReadEventConsumer := article.NewBatchReadEventConsumer(client, interactionRepository, loggerV2)
+	interactionDao := dao2.NewInteractionDao(db)
+	interactionCache := cache2.NewInteractionCache(cmdable)
+	interactionRepository := repository2.NewInteractionRepository(interactionDao, interactionCache)
+	batchReadEventConsumer := article3.NewBatchReadEventConsumer(client, interactionRepository, loggerV2)
 	v2 := ioc.NewConsumers(batchReadEventConsumer)
 	articleDao := dao.NewArticleDao(db)
 	articleCache := cache.NewArticleCache(cmdable)
@@ -58,7 +63,7 @@ func InitApp(templateId string) *App {
 	syncProducer := ioc.NewSyncProducer(config)
 	producer := article.NewSyncProducer(syncProducer)
 	articleService := service.NewArticleService(articleRepository, authorRepository, readerRepository, producer, loggerV2)
-	interactionService := service.NewInteractionService(interactionRepository)
+	interactionService := service2.NewInteractionService(interactionRepository)
 	rankingCache := cache.NewRankingCache(cmdable)
 	rankingRepository := repository.NewRankingRepository(rankingCache)
 	rankingService := service.NewRankingService(articleService, interactionService, rankingRepository)
@@ -77,5 +82,5 @@ func InitApp(templateId string) *App {
 var rankingSet = wire.NewSet(service.NewRankingService, repository.NewRankingRepository, cache.NewRankingCache)
 
 var (
-	providers = wire.NewSet(ioc.NewLogger, ioc.NewDB, ioc.NewRedis, ioc.InitMiddlewares, ioc.InitGin, ioc.InitSMSService, ioc.InitOAuth2Service, rankingSet, ioc.InitRankingJob, ioc.InitCron, ioc.NewSaramaConfig, ioc.NewConsumerClient, article.NewBatchReadEventConsumer, ioc.NewConsumers, ioc.NewSyncProducer, article.NewSyncProducer, web.NewSMSHandler, web.NewUserHandler, web.NewOAuth2WechatHandler, web.NewJWTHandler, web.NewArticleHandler, web.NewTestHandler, service.NewCodeService, service.NewUserService, service.NewArticleService, service.NewInteractionService, repository.NewInteractionRepository, repository.NewCodeRepository, repository.NewUserRepository, article2.NewArticleRepository, article2.NewArticleReaderRepository, article2.NewArticleAuthorRepository, dao.NewUserDao, dao.NewInteractionDao, dao.NewArticleDao, cache.NewArticleCache, cache.NewCodeCache, cache.NewUserCache, cache.NewInteractionCache, wire.Struct(new(App), "*"))
+	providers = wire.NewSet(ioc.NewLogger, ioc.NewDB, ioc.NewRedis, ioc.InitMiddlewares, ioc.InitGin, ioc.InitSMSService, ioc.InitOAuth2Service, rankingSet, ioc.InitRankingJob, ioc.InitCron, ioc.NewSaramaConfig, ioc.NewConsumerClient, article3.NewBatchReadEventConsumer, ioc.NewConsumers, ioc.NewSyncProducer, article.NewSyncProducer, web.NewSMSHandler, web.NewUserHandler, web.NewOAuth2WechatHandler, web.NewJWTHandler, web.NewArticleHandler, web.NewTestHandler, service.NewCodeService, service.NewUserService, service.NewArticleService, service2.NewInteractionService, repository2.NewInteractionRepository, repository.NewCodeRepository, repository.NewUserRepository, article2.NewArticleRepository, article2.NewArticleReaderRepository, article2.NewArticleAuthorRepository, dao.NewUserDao, dao2.NewInteractionDao, dao.NewArticleDao, cache.NewArticleCache, cache.NewCodeCache, cache.NewUserCache, cache2.NewInteractionCache, wire.Struct(new(App), "*"))
 )

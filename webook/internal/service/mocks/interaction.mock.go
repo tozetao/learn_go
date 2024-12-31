@@ -11,7 +11,7 @@ package svcmocks
 
 import (
 	context "context"
-	domain "learn_go/webook/internal/domain"
+	"learn_go/webook/interaction/domain"
 	reflect "reflect"
 
 	gomock "go.uber.org/mock/gomock"
