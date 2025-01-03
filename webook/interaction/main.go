@@ -36,6 +36,7 @@ func main() {
 
 	app := InitApp()
 
+	// 启动消费者服务
 	for _, consumer := range app.consumers {
 		consumer.Start()
 	}

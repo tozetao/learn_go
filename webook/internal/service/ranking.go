@@ -4,7 +4,7 @@ import (
 	"context"
 	"github.com/ecodeclub/ekit/queue"
 	"github.com/ecodeclub/ekit/slice"
-	service2 "learn_go/webook/interaction/service"
+	intrv1 "learn_go/webook/api/proto/gen/intr"
 	"learn_go/webook/internal/domain"
 	"learn_go/webook/internal/repository"
 	"math"
@@ -67,7 +67,7 @@ type rankingService struct {
 	// 榜单长度
 	length int
 
-	interSvc service2.InteractionService
+	interSvc intrv1.InteractionServiceClient
 	artSvc   ArticleService
 
 	// 计算分数的函数
@@ -81,7 +81,7 @@ type node struct {
 
 func NewRankingService(
 	artSvc ArticleService,
-	interSvc service2.InteractionService,
+	interSvc intrv1.InteractionServiceClient,
 	repo repository.RankingRepository) RankingService {
 	svc := &rankingService{
 		repo:      repo,
@@ -134,15 +134,19 @@ func (svc *rankingService) topN(ctx context.Context) ([]domain.Article, error) {
 		interIDs := slice.Map(articles, func(idx int, src domain.Article) int64 {
 			return src.ID
 		})
-		inters, err := svc.interSvc.GetByIDs(ctx, "article", interIDs)
+		resp, err := svc.interSvc.GetByIDs(ctx, &intrv1.GetByIDsReq{
+			Biz:    "article",
+			BizIds: interIDs,
+		})
 		if err != nil {
 			return nil, err
 		}
 
 		nodes := slice.Map(articles, func(idx int, src domain.Article) node {
+			score := svc.scoreFn(src.UTime, resp.Inters[src.ID].Likes)
 			return node{
 				article: src,
-				Score:   svc.scoreFn(src.UTime, inters[src.ID].Likes),
+				Score:   score,
 			}
 		})
 

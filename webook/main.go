@@ -13,18 +13,10 @@ import (
 )
 
 func main() {
-	InitConfig()
+	loadConfig()
 	//InitLogger()
 
 	app := InitApp("test-template")
-
-	// 启动消费者服务
-	for _, consumer := range app.consumers {
-		err := consumer.Start()
-		if err != nil {
-			panic(err)
-		}
-	}
 
 	// 启动定时任务
 	app.cron.Start()
@@ -50,7 +42,7 @@ func main() {
 	}
 }
 
-func InitConfig() {
+func loadConfig() {
 	//configFile := pflag.String("config", "./config/dev.yaml", "配置文件路径")
 	//pflag.Parse()
 	//fmt.Printf("%v\n", *configFile)

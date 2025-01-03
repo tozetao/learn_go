@@ -8,14 +8,13 @@ package main
 
 import (
 	"github.com/google/wire"
-	article3 "learn_go/webook/interaction/event/article"
 	repository2 "learn_go/webook/interaction/repository"
 	cache2 "learn_go/webook/interaction/repository/cache"
 	dao2 "learn_go/webook/interaction/repository/dao"
 	service2 "learn_go/webook/interaction/service"
-	"learn_go/webook/internal/event/article"
+	article2 "learn_go/webook/internal/event/article"
 	"learn_go/webook/internal/repository"
-	article2 "learn_go/webook/internal/repository/article"
+	"learn_go/webook/internal/repository/article"
 	"learn_go/webook/internal/repository/cache"
 	"learn_go/webook/internal/repository/dao"
 	"learn_go/webook/internal/service"
@@ -34,7 +33,7 @@ func InitApp(templateId string) *App {
 	cmdable := ioc.NewRedis(loggerV2)
 	jwtHandler := web.NewJWTHandler(cmdable)
 	v := ioc.InitMiddlewares(jwtHandler, loggerV2)
-	smsService := ioc.InitSMSService()
+	smsService := ioc.NewSMSService()
 	codeCache := cache.NewCodeCache(cmdable)
 	codeRepository := repository.NewCodeRepository(codeCache)
 	codeService := service.NewCodeService(templateId, smsService, codeRepository)
@@ -48,39 +47,63 @@ func InitApp(templateId string) *App {
 	oAuth2Service := ioc.InitOAuth2Service()
 	oAuth2WechatHandler := web.NewOAuth2WechatHandler(oAuth2Service, userService, jwtHandler)
 	engine := ioc.InitGin(v, smsHandler, userHandler, oAuth2WechatHandler)
+	articleDao := dao.NewArticleDao(db)
+	articleCache := cache.NewArticleCache(cmdable)
+	articleRepository := article.NewArticleRepository(articleDao, articleCache, userRepository, loggerV2)
+	authorRepository := article.NewArticleAuthorRepository()
+	readerRepository := article.NewArticleReaderRepository()
 	config := ioc.NewSaramaConfig()
-	client := ioc.NewConsumerClient(config)
+	syncProducer := ioc.NewSyncProducer(config)
+	producer := article2.NewSyncProducer(syncProducer)
+	articleService := service.NewArticleService(articleRepository, authorRepository, readerRepository, producer, loggerV2)
 	interactionDao := dao2.NewInteractionDao(db)
 	interactionCache := cache2.NewInteractionCache(cmdable)
 	interactionRepository := repository2.NewInteractionRepository(interactionDao, interactionCache)
-	batchReadEventConsumer := article3.NewBatchReadEventConsumer(client, interactionRepository, loggerV2)
-	v2 := ioc.NewConsumers(batchReadEventConsumer)
-	articleDao := dao.NewArticleDao(db)
-	articleCache := cache.NewArticleCache(cmdable)
-	articleRepository := article2.NewArticleRepository(articleDao, articleCache, userRepository, loggerV2)
-	authorRepository := article2.NewArticleAuthorRepository()
-	readerRepository := article2.NewArticleReaderRepository()
-	syncProducer := ioc.NewSyncProducer(config)
-	producer := article.NewSyncProducer(syncProducer)
-	articleService := service.NewArticleService(articleRepository, authorRepository, readerRepository, producer, loggerV2)
 	interactionService := service2.NewInteractionService(interactionRepository)
-	rankingCache := cache.NewRankingCache(cmdable)
-	rankingRepository := repository.NewRankingRepository(rankingCache)
-	rankingService := service.NewRankingService(articleService, interactionService, rankingRepository)
+	interactionServiceClient := ioc.NewGRPCInteractionServiceClient(interactionService)
+	redisRanking := ioc.NewRedisRanking(cmdable)
+	localCacheRanking := ioc.NewLocalCacheRanking()
+	rankingRepository := repository.NewRankingRepository(redisRanking, localCacheRanking)
+	rankingService := service.NewRankingService(articleService, interactionServiceClient, rankingRepository)
 	rankingJob := ioc.InitRankingJob(rankingService)
 	cron := ioc.InitCron(loggerV2, rankingJob)
 	app := &App{
-		server:    engine,
-		consumers: v2,
-		cron:      cron,
+		server: engine,
+		cron:   cron,
 	}
 	return app
 }
 
 // wire.go:
 
-var rankingSet = wire.NewSet(service.NewRankingService, repository.NewRankingRepository, cache.NewRankingCache)
+var rankingSet = wire.NewSet(service.NewRankingService, repository.NewRankingRepository, ioc.NewRedisRanking, ioc.NewLocalCacheRanking)
+
+// 第三方依赖
+var thirdPartySet = wire.NewSet(ioc.NewLogger, ioc.NewDB, ioc.NewRedis, ioc.InitMiddlewares, ioc.InitGin)
+
+var jobSet = wire.NewSet(ioc.InitRankingJob, ioc.InitCron)
+
+// 生产者
+var producerSet = wire.NewSet(ioc.NewSaramaConfig, ioc.NewSyncProducer, article2.NewSyncProducer)
+
+var articleSet = wire.NewSet(web.NewArticleHandler, service.NewArticleService, article.NewArticleRepository, article.NewArticleAuthorRepository, article.NewArticleReaderRepository, dao.NewArticleDao, cache.NewArticleCache, service2.NewInteractionService, repository2.NewInteractionRepository, dao2.NewInteractionDao, cache2.NewInteractionCache, ioc.NewGRPCInteractionServiceClient)
+
+var smsSet = wire.NewSet(web.NewSMSHandler, service.NewCodeService, ioc.NewSMSService, repository.NewCodeRepository, cache.NewCodeCache)
+
+var userSet = wire.NewSet(web.NewUserHandler, service.NewUserService, repository.NewUserRepository, cache.NewUserCache, dao.NewUserDao)
+
+var wechatSet = wire.NewSet(web.NewOAuth2WechatHandler, ioc.InitOAuth2Service, web.NewJWTHandler)
 
 var (
-	providers = wire.NewSet(ioc.NewLogger, ioc.NewDB, ioc.NewRedis, ioc.InitMiddlewares, ioc.InitGin, ioc.InitSMSService, ioc.InitOAuth2Service, rankingSet, ioc.InitRankingJob, ioc.InitCron, ioc.NewSaramaConfig, ioc.NewConsumerClient, article3.NewBatchReadEventConsumer, ioc.NewConsumers, ioc.NewSyncProducer, article.NewSyncProducer, web.NewSMSHandler, web.NewUserHandler, web.NewOAuth2WechatHandler, web.NewJWTHandler, web.NewArticleHandler, web.NewTestHandler, service.NewCodeService, service.NewUserService, service.NewArticleService, service2.NewInteractionService, repository2.NewInteractionRepository, repository.NewCodeRepository, repository.NewUserRepository, article2.NewArticleRepository, article2.NewArticleReaderRepository, article2.NewArticleAuthorRepository, dao.NewUserDao, dao2.NewInteractionDao, dao.NewArticleDao, cache.NewArticleCache, cache.NewCodeCache, cache.NewUserCache, cache2.NewInteractionCache, wire.Struct(new(App), "*"))
+	providers = wire.NewSet(
+		thirdPartySet,
+		producerSet,
+		jobSet,
+
+		rankingSet,
+		articleSet,
+		smsSet,
+		userSet,
+		wechatSet, web.NewTestHandler, wire.Struct(new(App), "*"),
+	)
 )

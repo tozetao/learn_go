@@ -4,7 +4,7 @@ import (
 	"errors"
 	"github.com/ecodeclub/ekit/slice"
 	"github.com/gin-gonic/gin"
-	service2 "learn_go/webook/interaction/service"
+	intrv1 "learn_go/webook/api/proto/gen/intr"
 	"learn_go/webook/internal/domain"
 	"learn_go/webook/internal/service"
 	"learn_go/webook/pkg/ginx"
@@ -17,12 +17,12 @@ import (
 type ArticleHandler struct {
 	log      logger.LoggerV2
 	svc      service.ArticleService
-	interSvc service2.InteractionService
+	interSvc intrv1.InteractionServiceClient
 
 	biz string
 }
 
-func NewArticleHandler(svc service.ArticleService, interSvc service2.InteractionService, l logger.LoggerV2) *ArticleHandler {
+func NewArticleHandler(svc service.ArticleService, interSvc intrv1.InteractionServiceClient, l logger.LoggerV2) *ArticleHandler {
 	return &ArticleHandler{
 		log:      l,
 		svc:      svc,
@@ -238,16 +238,21 @@ func (handler *ArticleHandler) PubDetail(c *gin.Context) {
 	vo := handler.ToVO(art)
 
 	// 查询文章的点赞数、收藏数和观看书
-	inter, err := handler.interSvc.Get(c, userClaims.Uid, handler.biz, articleID)
+	resp, err := handler.interSvc.Get(c, &intrv1.GetReq{
+		//userClaims.Uid, handler.biz, articleID
+		Uid:   userClaims.Uid,
+		Biz:   handler.biz,
+		BizId: articleID,
+	})
 	if err != nil {
 		// 记录错误
 	} else {
 		// 查询用户是否点赞、收藏
-		vo.Views = inter.Views
-		vo.Favorites = inter.Favorites
-		vo.Likes = inter.Likes
-		vo.Liked = inter.Liked
-		vo.Collected = inter.Collected
+		vo.Views = resp.Inter.Views
+		vo.Favorites = resp.Inter.Favorites
+		vo.Likes = resp.Inter.Likes
+		vo.Liked = resp.Inter.Liked
+		vo.Collected = resp.Inter.Collected
 	}
 	//ok, _ = handler.interSvc.Liked(c, userClaims.Uid, handler.biz, articleID)
 	//if !ok {
@@ -273,9 +278,19 @@ func (handler *ArticleHandler) PubDetail(c *gin.Context) {
 func (handler *ArticleHandler) Like(c *gin.Context, req LikeReq, userClaims *UserClaims) (ginx.Result, error) {
 	var err error
 	if req.Action == ArticleLike {
-		err = handler.interSvc.Like(c, userClaims.Uid, handler.biz, req.ArticleID)
+		_, err = handler.interSvc.Like(c, &intrv1.LikeReq{
+			//userClaims.Uid, handler.biz, req.ArticleID
+			Uid:   userClaims.Uid,
+			Biz:   handler.biz,
+			BizId: req.ArticleID,
+		})
 	} else {
-		err = handler.interSvc.CancelLike(c, userClaims.Uid, handler.biz, req.ArticleID)
+		_, err = handler.interSvc.CancelLike(c, &intrv1.CancelLikeReq{
+			//userClaims.Uid, handler.biz, req.ArticleID
+			Uid:   userClaims.Uid,
+			Biz:   handler.biz,
+			BizId: req.ArticleID,
+		})
 	}
 	if err != nil {
 		return ginx.Result{
@@ -289,7 +304,13 @@ func (handler *ArticleHandler) Like(c *gin.Context, req LikeReq, userClaims *Use
 }
 
 func (handler *ArticleHandler) Favorite(ctx *gin.Context, req FavoriteReq, userClaims *UserClaims) (ginx.Result, error) {
-	err := handler.interSvc.Favorite(ctx, userClaims.Uid, req.FavoriteID, handler.biz, req.ArticleID)
+	_, err := handler.interSvc.Favorite(ctx, &intrv1.FavoriteReq{
+		//userClaims.Uid, req.FavoriteID, handler.biz, req.ArticleID
+		Uid:        userClaims.Uid,
+		FavoriteId: req.FavoriteID,
+		Biz:        handler.biz,
+		BizId:      req.ArticleID,
+	})
 	if err != nil {
 		return ginx.Result{Code: 5, Msg: "save error"}, errors.New("failed")
 	}
